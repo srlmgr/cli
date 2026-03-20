@@ -19,6 +19,7 @@ import (
 	"github.com/srlmgr/cli/cmd/config"
 	importcmd "github.com/srlmgr/cli/cmd/importsvc"
 	querycmd "github.com/srlmgr/cli/cmd/query"
+	setupcmd "github.com/srlmgr/cli/cmd/setup"
 	"github.com/srlmgr/cli/log"
 	"github.com/srlmgr/cli/otel"
 	"github.com/srlmgr/cli/version"
@@ -141,6 +142,7 @@ func init() {
 		commandcmd.NewCmd(),
 		importcmd.NewCmd(),
 		querycmd.NewCmd(),
+		setupcmd.NewCmd(),
 	)
 }
 

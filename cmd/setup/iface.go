@@ -1,0 +1,105 @@
+package setup
+
+import (
+	"context"
+
+	commandv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/command/v1"
+	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
+	"connectrpc.com/connect"
+)
+
+// commandClient is the subset of CommandServiceClient used by the setup runner.
+type commandClient interface {
+	CreateSimulation(
+		context.Context,
+		*connect.Request[commandv1.CreateSimulationRequest],
+	) (*connect.Response[commandv1.CreateSimulationResponse], error)
+
+	CreateSeries(
+		context.Context,
+		*connect.Request[commandv1.CreateSeriesRequest],
+	) (*connect.Response[commandv1.CreateSeriesResponse], error)
+
+	CreateSeason(
+		context.Context,
+		*connect.Request[commandv1.CreateSeasonRequest],
+	) (*connect.Response[commandv1.CreateSeasonResponse], error)
+
+	CreatePointSystem(
+		context.Context,
+		*connect.Request[commandv1.CreatePointSystemRequest],
+	) (*connect.Response[commandv1.CreatePointSystemResponse], error)
+
+	CreateTrack(
+		context.Context,
+		*connect.Request[commandv1.CreateTrackRequest],
+	) (*connect.Response[commandv1.CreateTrackResponse], error)
+
+	CreateTrackLayout(
+		context.Context,
+		*connect.Request[commandv1.CreateTrackLayoutRequest],
+	) (*connect.Response[commandv1.CreateTrackLayoutResponse], error)
+
+	CreateCarManufacturer(
+		context.Context,
+		*connect.Request[commandv1.CreateCarManufacturerRequest],
+	) (*connect.Response[commandv1.CreateCarManufacturerResponse], error)
+
+	CreateCarBrand(
+		context.Context,
+		*connect.Request[commandv1.CreateCarBrandRequest],
+	) (*connect.Response[commandv1.CreateCarBrandResponse], error)
+
+	CreateCarModel(
+		context.Context,
+		*connect.Request[commandv1.CreateCarModelRequest],
+	) (*connect.Response[commandv1.CreateCarModelResponse], error)
+}
+
+// queryClient is the subset of QueryServiceClient used by the setup runner.
+type queryClient interface {
+	ListSimulations(
+		context.Context,
+		*connect.Request[queryv1.ListSimulationsRequest],
+	) (*connect.Response[queryv1.ListSimulationsResponse], error)
+
+	ListSeries(
+		context.Context,
+		*connect.Request[queryv1.ListSeriesRequest],
+	) (*connect.Response[queryv1.ListSeriesResponse], error)
+
+	ListSeasons(
+		context.Context,
+		*connect.Request[queryv1.ListSeasonsRequest],
+	) (*connect.Response[queryv1.ListSeasonsResponse], error)
+
+	ListPointSystems(
+		context.Context,
+		*connect.Request[queryv1.ListPointSystemsRequest],
+	) (*connect.Response[queryv1.ListPointSystemsResponse], error)
+
+	ListTracks(
+		context.Context,
+		*connect.Request[queryv1.ListTracksRequest],
+	) (*connect.Response[queryv1.ListTracksResponse], error)
+
+	ListTrackLayouts(
+		context.Context,
+		*connect.Request[queryv1.ListTrackLayoutsRequest],
+	) (*connect.Response[queryv1.ListTrackLayoutsResponse], error)
+
+	ListCarManufacturers(
+		context.Context,
+		*connect.Request[queryv1.ListCarManufacturersRequest],
+	) (*connect.Response[queryv1.ListCarManufacturersResponse], error)
+
+	ListCarBrands(
+		context.Context,
+		*connect.Request[queryv1.ListCarBrandsRequest],
+	) (*connect.Response[queryv1.ListCarBrandsResponse], error)
+
+	ListCarModels(
+		context.Context,
+		*connect.Request[queryv1.ListCarModelsRequest],
+	) (*connect.Response[queryv1.ListCarModelsResponse], error)
+}

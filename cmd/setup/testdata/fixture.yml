@@ -1,0 +1,22 @@
+pointSystems:
+  - name: Standard
+
+simulations:
+  - name: iRacing
+    series:
+      - name: Porsche Cup
+        seasons:
+          - name: Saison XVIII
+            pointSystem: Standard
+
+carManufacturers:
+  - name: Porsche
+    brands:
+      - name: Porsche 911
+        models:
+          - name: Porsche 911 GT3 Cup (992)
+
+tracks:
+  - name: Interlagos
+    layouts:
+      - name: Grand Prix
