@@ -1,6 +1,10 @@
 package get
 
-import "github.com/spf13/cobra"
+import (
+	"github.com/spf13/cobra"
+
+	"github.com/srlmgr/cli/cmd/query/get/simulation"
+)
 
 func NewCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -9,5 +13,6 @@ func NewCmd() *cobra.Command {
 		Long:  "Commands for getting resources from backend.query.v1.QueryService",
 	}
 
+	cmd.AddCommand(simulation.NewCmd())
 	return cmd
 }

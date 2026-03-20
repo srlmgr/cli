@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strings"
 
 	commandv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/command/v1"
 	"connectrpc.com/connect"
@@ -12,6 +11,7 @@ import (
 
 	"github.com/srlmgr/cli/cmd/command/client"
 	"github.com/srlmgr/cli/cmd/config"
+	"github.com/srlmgr/cli/conversion"
 	"github.com/srlmgr/cli/log"
 )
 
@@ -54,12 +54,17 @@ func (c *createSimulationCommand) run(ctx context.Context) error {
 	logger := log.GetFromContext(ctx).Named("rpc")
 	cl := client.NewCommandServiceClient(config.APIAddr, config.APIToken, logger)
 
+	supportedFormats, err := conversion.ParseImportFormats(c.supportedFormats)
+	if err != nil {
+		return fmt.Errorf("parse supported formats: %w", err)
+	}
+
 	resp, err := cl.CreateSimulation(
 		ctx,
 		connect.NewRequest(&commandv1.CreateSimulationRequest{
 			Name:             c.name,
 			IsActive:         true,
-			SupportedFormats: c.supportedFormats,
+			SupportedFormats: supportedFormats,
 		}),
 	)
 	if err != nil {
@@ -72,7 +77,7 @@ func (c *createSimulationCommand) run(ctx context.Context) error {
 		sim.GetId(),
 		sim.GetName(),
 		sim.GetIsActive(),
-		strings.Join(sim.GetSupportedFormats(), ", "),
+		conversion.JoinImportFormats(sim.GetSupportedFormats()),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)
 	}

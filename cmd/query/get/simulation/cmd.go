@@ -20,12 +20,18 @@ func NewCmd() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:   "simulation",
-		Short: "List all simulations",
-		Long:  "Fetch simulations from backend.query.v1.QueryService.ListSimulations",
+		Short: "Get a simulation",
+		Long:  "Fetch a simulation from backend.query.v1.QueryService.GetSimulation",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			runner := &listSimulationsCommand{
+			simulationID, err := cmd.Flags().GetUint32("simulation-id")
+			if err != nil {
+				return fmt.Errorf("parse simulation-id flag: %w", err)
+			}
+
+			runner := &getSimulationCommand{
 				apiBaseURL:   config.APIAddr,
 				apiToken:     config.APIToken,
+				simulationID: simulationID,
 				outputFormat: outputFormat,
 				out:          cmd.OutOrStdout(),
 			}
@@ -33,6 +39,10 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
+	cmd.Flags().Uint32("simulation-id", 0, "ID of the simulation to get")
+	if err := cmd.MarkFlagRequired("simulation-id"); err != nil {
+		panic(err)
+	}
 	cmd.Flags().StringVarP(&outputFormat,
 		"output",
 		"o",
@@ -41,25 +51,28 @@ func NewCmd() *cobra.Command {
 	return cmd
 }
 
-type listSimulationsCommand struct {
+type getSimulationCommand struct {
 	apiBaseURL   string
 	apiToken     string
+	simulationID uint32
 	outputFormat string
 	out          io.Writer
 }
 
-func (c *listSimulationsCommand) run(ctx context.Context) error {
+func (c *getSimulationCommand) run(ctx context.Context) error {
 	logger := log.GetFromContext(ctx).Named("rpc")
 	svc := client.NewQueryServiceClient(c.apiBaseURL, logger)
 
-	resp, err := svc.ListSimulations(
+	resp, err := svc.GetSimulation(
 		ctx,
-		connect.NewRequest(&queryv1.ListSimulationsRequest{}),
+		connect.NewRequest(&queryv1.GetSimulationRequest{
+			Id: c.simulationID,
+		}),
 	)
 	if err != nil {
-		return fmt.Errorf("list simulations: %w", err)
+		return fmt.Errorf("get simulation: %w", err)
 	}
 
 	formatter := output.NewSimulationFormatter()
-	return formatter.FormatSimulations(c.out, c.outputFormat, resp.Msg)
+	return formatter.FormatSimulation(c.out, c.outputFormat, resp.Msg)
 }
