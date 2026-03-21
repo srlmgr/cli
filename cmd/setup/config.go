@@ -5,6 +5,7 @@ import (
 	"os"
 	"time"
 
+	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 	"gopkg.in/yaml.v3"
 )
 
@@ -51,12 +52,35 @@ type SeasonConfig struct {
 
 // EventConfig defines an event under a season.
 type EventConfig struct {
-	Name            string       `yaml:"name"`
-	TrackLayout     string       `yaml:"trackLayout"`
-	Date            string       `yaml:"date"`
-	Status          string       `yaml:"status"`
-	ProcessingState string       `yaml:"processingState"`
-	Races           []RaceConfig `yaml:"races"`
+	Name            string                     `yaml:"name"`
+	TrackLayout     string                     `yaml:"trackLayout"`
+	Date            string                     `yaml:"date"`
+	Status          EventStatusConfig          `yaml:"status"`
+	ProcessingState EventProcessingStateConfig `yaml:"processingState"`
+	Races           []RaceConfig               `yaml:"races"`
+}
+
+// EventStatusConfig stores backend.common.v1.EventStatus enum literals from YAML.
+type EventStatusConfig string
+
+// EventProcessingStateConfig stores backend.common.v1.EventProcessingState
+// enum literals from YAML.
+type EventProcessingStateConfig string
+
+func (s EventStatusConfig) String() string {
+	if s == "" {
+		return commonv1.EventStatus_EVENT_STATUS_UNSPECIFIED.String()
+	}
+
+	return string(s)
+}
+
+func (s EventProcessingStateConfig) String() string {
+	if s == "" {
+		return commonv1.EventProcessingState_EVENT_PROCESSING_STATE_UNSPECIFIED.String()
+	}
+
+	return string(s)
 }
 
 // RaceConfig defines a race under an event.
