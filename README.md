@@ -268,6 +268,77 @@ OR
 make run q="--version"
 ```
 
+### Setup Command
+
+The `setup` command provisions a system with base data from a YAML configuration file.
+It uses a list-then-create pattern to ensure idempotency — running the command twice
+with the same file will not create duplicates.
+
+**Usage:**
+
+```sh
+cli setup --file setup.yml
+```
+
+**Flags:**
+
+| Flag | Description |
+| :--- | :--- |
+| `-f`, `--file` | Path to the YAML setup file (required) |
+| `--dry-run` | Preview actions without making changes |
+
+**YAML configuration example:**
+
+```yaml
+pointSystems:
+  - name: Standard
+
+simulations:
+  - name: iRacing
+    series:
+      - name: Porsche Cup
+        seasons:
+          - name: Saison XVIII
+            pointSystem: Standard
+
+carManufacturers:
+  - name: Porsche
+    brands:
+      - name: Porsche 911
+        models:
+          - name: Porsche 911 GT3 Cup (992)
+
+tracks:
+  - name: Interlagos
+    layouts:
+      - name: Grand Prix
+```
+
+**Sample output:**
+
+```
+created point-system "Standard" id=1
+created simulation "iRacing" id=2
+created series "Porsche Cup" id=3
+created season "Saison XVIII" id=4
+created car-manufacturer "Porsche" id=5
+created car-brand "Porsche 911" id=6
+created car-model "Porsche 911 GT3 Cup (992)" id=7
+created track "Interlagos" id=8
+created track-layout "Grand Prix" id=9
+```
+
+When run again with the same file, all lines will show `existing` instead of `created`.
+
+**Dry-run mode:**
+
+```sh
+cli setup --file setup.yml --dry-run
+```
+
+Outputs `dry-run: would create <entity> "<name>"` for each entity that does not yet
+exist, without making any API calls.
+
 <br>
 
 ## Releases
