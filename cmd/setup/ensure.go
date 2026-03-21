@@ -4,11 +4,13 @@ package setup
 import (
 	"context"
 	"fmt"
+	"time"
 
 	commandv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/command/v1"
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
 	"connectrpc.com/connect"
+	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
 //nolint:whitespace // editor/linter issue
@@ -46,7 +48,7 @@ func (r *setupRunner) ensurePointSystem(
 
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureSimulation(
-	ctx context.Context, name string,
+	ctx context.Context, name string, isActive bool,
 ) (uint32, bool, error) {
 	return findOrCreate(ctx,
 		func(ctx context.Context) ([]*commonv1.Simulation, error) {
@@ -65,7 +67,7 @@ func (r *setupRunner) ensureSimulation(
 			resp, err := r.cmdSvc.CreateSimulation(ctx,
 				connect.NewRequest(&commandv1.CreateSimulationRequest{
 					Name:     name,
-					IsActive: true,
+					IsActive: isActive,
 				}),
 			)
 			if err != nil {
@@ -328,4 +330,116 @@ func (r *setupRunner) ensureTrackLayout(
 		},
 		r.dryRun,
 	)
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) ensureDriver(
+	ctx context.Context, cfg DriverConfig,
+) (uint32, bool, error) {
+	return findOrCreate(ctx,
+		func(ctx context.Context) ([]*commonv1.Driver, error) {
+			resp, err := r.qrySvc.ListDrivers(ctx,
+				connect.NewRequest(&queryv1.ListDriversRequest{}),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("list drivers: %w", err)
+			}
+
+			return resp.Msg.GetItems(), nil
+		},
+		func(d *commonv1.Driver) bool { return d.GetName() == cfg.Name },
+		func(d *commonv1.Driver) uint32 { return d.GetId() },
+		func(ctx context.Context) (uint32, error) {
+			resp, err := r.cmdSvc.CreateDriver(ctx,
+				connect.NewRequest(&commandv1.CreateDriverRequest{
+					Name:       cfg.Name,
+					ExternalId: cfg.ExternalID,
+					IsActive:   cfg.IsActive,
+				}),
+			)
+			if err != nil {
+				return 0, fmt.Errorf("create driver: %w", err)
+			}
+
+			return resp.Msg.GetDriver().GetId(), nil
+		},
+		r.dryRun,
+	)
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) ensureEvent(
+	ctx context.Context, seasonID, trackLayoutID uint32, cfg EventConfig,
+) (uint32, bool, error) {
+	return findOrCreate(ctx,
+		func(ctx context.Context) ([]*commonv1.Event, error) {
+			resp, err := r.qrySvc.ListEvents(ctx,
+				connect.NewRequest(&queryv1.ListEventsRequest{
+					SeasonId: seasonID,
+				}),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("list events: %w", err)
+			}
+
+			return resp.Msg.GetItems(), nil
+		},
+		func(e *commonv1.Event) bool { return e.GetName() == cfg.Name },
+		func(e *commonv1.Event) uint32 { return e.GetId() },
+		func(ctx context.Context) (uint32, error) {
+			req := &commandv1.CreateEventRequest{
+				SeasonId:        seasonID,
+				TrackLayoutId:   trackLayoutID,
+				Name:            cfg.Name,
+				Status:          cfg.Status,
+				ProcessingState: cfg.ProcessingState,
+			}
+
+			if cfg.Date != "" {
+				t, err := time.Parse(time.DateOnly, cfg.Date)
+				if err != nil {
+					return 0, fmt.Errorf("parse event date %q: %w", cfg.Date, err)
+				}
+
+				req.SetEventDate(timestamppb.New(t))
+			}
+
+			resp, err := r.cmdSvc.CreateEvent(ctx, connect.NewRequest(req))
+			if err != nil {
+				return 0, fmt.Errorf("create event: %w", err)
+			}
+
+			return resp.Msg.GetEvent().GetId(), nil
+		},
+		r.dryRun,
+	)
+}
+
+// createRace unconditionally creates a race under the given event.
+// There is no ListRaces endpoint, so this is called only when the parent event
+// was newly provisioned in the same run. If the setup run is interrupted after
+// event creation but before race creation completes, re-running will detect the
+// event as existing and skip race provisioning entirely.
+//
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) createRace(
+	ctx context.Context, eventID uint32, cfg RaceConfig,
+) (uint32, error) {
+	if r.dryRun {
+		return 0, nil
+	}
+
+	resp, err := r.cmdSvc.CreateRace(ctx,
+		connect.NewRequest(&commandv1.CreateRaceRequest{
+			EventId:     eventID,
+			Name:        cfg.Name,
+			SessionType: cfg.SessionType,
+			SequenceNo:  cfg.SequenceNo,
+		}),
+	)
+	if err != nil {
+		return 0, fmt.Errorf("create race: %w", err)
+	}
+
+	return resp.Msg.GetRace().GetId(), nil
 }

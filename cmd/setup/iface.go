@@ -55,6 +55,21 @@ type commandClient interface {
 		context.Context,
 		*connect.Request[commandv1.CreateCarModelRequest],
 	) (*connect.Response[commandv1.CreateCarModelResponse], error)
+
+	CreateDriver(
+		context.Context,
+		*connect.Request[commandv1.CreateDriverRequest],
+	) (*connect.Response[commandv1.CreateDriverResponse], error)
+
+	CreateEvent(
+		context.Context,
+		*connect.Request[commandv1.CreateEventRequest],
+	) (*connect.Response[commandv1.CreateEventResponse], error)
+
+	CreateRace(
+		context.Context,
+		*connect.Request[commandv1.CreateRaceRequest],
+	) (*connect.Response[commandv1.CreateRaceResponse], error)
 }
 
 // queryClient is the subset of QueryServiceClient used by the setup runner.
@@ -103,4 +118,14 @@ type queryClient interface {
 		context.Context,
 		*connect.Request[queryv1.ListCarModelsRequest],
 	) (*connect.Response[queryv1.ListCarModelsResponse], error)
+
+	ListDrivers(
+		context.Context,
+		*connect.Request[queryv1.ListDriversRequest],
+	) (*connect.Response[queryv1.ListDriversResponse], error)
+
+	ListEvents(
+		context.Context,
+		*connect.Request[queryv1.ListEventsRequest],
+	) (*connect.Response[queryv1.ListEventsResponse], error)
 }
