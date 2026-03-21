@@ -367,10 +367,14 @@ func (r *setupRunner) ensureDriver(
 	)
 }
 
-//nolint:whitespace // editor/linter issue
+//nolint:whitespace,funlen // editor/linter issue,much to do
 func (r *setupRunner) ensureEvent(
-	ctx context.Context, seasonID, trackLayoutID uint32, cfg EventConfig,
+	ctx context.Context, seasonID, trackLayoutID uint32, cfg *EventConfig,
 ) (uint32, bool, error) {
+	if cfg == nil {
+		return 0, false, fmt.Errorf("event config is nil")
+	}
+
 	return findOrCreate(ctx,
 		func(ctx context.Context) ([]*commonv1.Event, error) {
 			resp, err := r.qrySvc.ListEvents(ctx,
@@ -463,10 +467,10 @@ func (r *setupRunner) ensureRace(
 
 // validRaceSessionTypes returns the list of valid session type enum names.
 func validRaceSessionTypes() []string {
-names := make([]string, 0, len(commonv1.RaceSessionType_value))
-for name := range commonv1.RaceSessionType_value {
-names = append(names, name)
-}
+	names := make([]string, 0, len(commonv1.RaceSessionType_value))
+	for name := range commonv1.RaceSessionType_value {
+		names = append(names, name)
+	}
 
-return names
+	return names
 }

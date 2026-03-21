@@ -478,7 +478,8 @@ func (m *mockQueryClient) ListRaces(
 }
 
 // ---- YAML parsing tests ----
-
+//
+//nolint:gocyclo // test function with multiple assertions
 func TestLoadConfig_ValidYAML(t *testing.T) {
 	t.Parallel()
 
@@ -546,7 +547,8 @@ func TestLoadConfig_ValidYAML(t *testing.T) {
 	}
 
 	if races[0].SessionType != "RACE_SESSION_TYPE_RACE" {
-		t.Errorf("expected sessionType %q, got %q", "RACE_SESSION_TYPE_RACE", races[0].SessionType)
+		t.Errorf("expected sessionType %q, got %q",
+			"RACE_SESSION_TYPE_RACE", races[0].SessionType)
 	}
 
 	if len(cfg.Tracks) != 1 || cfg.Tracks[0].Name != "Interlagos" {

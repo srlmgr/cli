@@ -144,7 +144,8 @@ func validatePointSystems(items []PointSystemConfig) error {
 }
 
 func validateDrivers(items []DriverConfig) error {
-	for i, d := range items {
+	for i := range items {
+		d := items[i]
 		if d.Name == "" {
 			return fmt.Errorf("drivers[%d]: name is required", i)
 		}
@@ -212,9 +213,14 @@ func validateEvents(simIdx, serIdx, snIdx int, events []EventConfig) error {
 
 		if events[i].Date != "" {
 			if _, err := time.Parse(time.DateOnly, events[i].Date); err != nil {
+				//nolint:lll // readability
 				return fmt.Errorf(
 					"simulations[%d].series[%d].seasons[%d].events[%d]: invalid date %q (expected YYYY-MM-DD)",
-					simIdx, serIdx, snIdx, i, events[i].Date,
+					simIdx,
+					serIdx,
+					snIdx,
+					i,
+					events[i].Date,
 				)
 			}
 		}

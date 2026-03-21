@@ -1,4 +1,3 @@
-//nolint:dupl // methods are similar by design
 package setup
 
 import (
@@ -16,6 +15,8 @@ type setupRunner struct {
 }
 
 // run loads the config and provisions all entities in the required order.
+//
+//nolint:govet // by design
 func (r *setupRunner) run(ctx context.Context) error {
 	cfg, err := loadConfig(r.filePath)
 	if err != nil {
@@ -52,7 +53,8 @@ func (r *setupRunner) setupDrivers(
 	ctx context.Context,
 	drivers []DriverConfig,
 ) error {
-	for _, d := range drivers {
+	for i := range drivers {
+		d := drivers[i]
 		id, created, err := r.ensureDriver(ctx, d)
 		if err != nil {
 			return fmt.Errorf("driver %q: %w", d.Name, err)
@@ -106,7 +108,12 @@ func (r *setupRunner) setupSimulations(
 			return err
 		}
 
-		if err := r.setupSeriesList(ctx, simID, sims[i].Series, psIDs, layoutIDs); err != nil {
+		if err := r.setupSeriesList(
+			ctx,
+			simID,
+			sims[i].Series,
+			psIDs,
+			layoutIDs); err != nil {
 			return fmt.Errorf("simulation %q series: %w", sims[i].Name, err)
 		}
 	}
@@ -132,7 +139,13 @@ func (r *setupRunner) setupSeriesList(
 			return err
 		}
 
-		if err := r.setupSeasonList(ctx, srID, series[i].Seasons, psIDs, layoutIDs); err != nil {
+		if err := r.setupSeasonList(
+			ctx,
+			srID,
+			series[i].Seasons,
+			psIDs,
+			layoutIDs,
+		); err != nil {
 			return fmt.Errorf("series %q seasons: %w", series[i].Name, err)
 		}
 	}
@@ -187,7 +200,7 @@ func (r *setupRunner) setupEventList(
 
 		layoutID := layoutIDs[events[i].TrackLayout]
 
-		evID, created, err := r.ensureEvent(ctx, seasonID, layoutID, events[i])
+		evID, created, err := r.ensureEvent(ctx, seasonID, layoutID, &events[i])
 		if err != nil {
 			return fmt.Errorf("event %q: %w", events[i].Name, err)
 		}
