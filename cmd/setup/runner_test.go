@@ -61,6 +61,21 @@ type mockCommandClient struct {
 		context.Context,
 		*connect.Request[commandv1.CreateCarModelRequest],
 	) (*connect.Response[commandv1.CreateCarModelResponse], error)
+
+	createDriver func(
+		context.Context,
+		*connect.Request[commandv1.CreateDriverRequest],
+	) (*connect.Response[commandv1.CreateDriverResponse], error)
+
+	createEvent func(
+		context.Context,
+		*connect.Request[commandv1.CreateEventRequest],
+	) (*connect.Response[commandv1.CreateEventResponse], error)
+
+	createRace func(
+		context.Context,
+		*connect.Request[commandv1.CreateRaceRequest],
+	) (*connect.Response[commandv1.CreateRaceResponse], error)
 }
 
 func (m *mockCommandClient) CreateSimulation(
@@ -216,6 +231,57 @@ func (m *mockCommandClient) CreateCarModel(
 	return connect.NewResponse(resp), nil
 }
 
+func (m *mockCommandClient) CreateDriver(
+	ctx context.Context,
+	req *connect.Request[commandv1.CreateDriverRequest],
+) (*connect.Response[commandv1.CreateDriverResponse], error) {
+	if m.createDriver != nil {
+		return m.createDriver(ctx, req)
+	}
+
+	resp := &commandv1.CreateDriverResponse{}
+	d := &commonv1.Driver{}
+	d.SetName(req.Msg.GetName())
+	d.SetId(40)
+	resp.SetDriver(d)
+
+	return connect.NewResponse(resp), nil
+}
+
+func (m *mockCommandClient) CreateEvent(
+	ctx context.Context,
+	req *connect.Request[commandv1.CreateEventRequest],
+) (*connect.Response[commandv1.CreateEventResponse], error) {
+	if m.createEvent != nil {
+		return m.createEvent(ctx, req)
+	}
+
+	resp := &commandv1.CreateEventResponse{}
+	e := &commonv1.Event{}
+	e.SetName(req.Msg.GetName())
+	e.SetId(50)
+	resp.SetEvent(e)
+
+	return connect.NewResponse(resp), nil
+}
+
+func (m *mockCommandClient) CreateRace(
+	ctx context.Context,
+	req *connect.Request[commandv1.CreateRaceRequest],
+) (*connect.Response[commandv1.CreateRaceResponse], error) {
+	if m.createRace != nil {
+		return m.createRace(ctx, req)
+	}
+
+	resp := &commandv1.CreateRaceResponse{}
+	rc := &commonv1.Race{}
+	rc.SetName(req.Msg.GetName())
+	rc.SetId(51)
+	resp.SetRace(rc)
+
+	return connect.NewResponse(resp), nil
+}
+
 // mockQueryClient returns empty lists by default (simulates no existing entities).
 type mockQueryClient struct {
 	listSimulations func(
@@ -262,6 +328,21 @@ type mockQueryClient struct {
 		context.Context,
 		*connect.Request[queryv1.ListCarModelsRequest],
 	) (*connect.Response[queryv1.ListCarModelsResponse], error)
+
+	listDrivers func(
+		context.Context,
+		*connect.Request[queryv1.ListDriversRequest],
+	) (*connect.Response[queryv1.ListDriversResponse], error)
+
+	listEvents func(
+		context.Context,
+		*connect.Request[queryv1.ListEventsRequest],
+	) (*connect.Response[queryv1.ListEventsResponse], error)
+
+	listRaces func(
+		context.Context,
+		*connect.Request[queryv1.ListRacesRequest],
+	) (*connect.Response[queryv1.ListRacesResponse], error)
 }
 
 func (m *mockQueryClient) ListSimulations(
@@ -363,14 +444,59 @@ func (m *mockQueryClient) ListCarModels(
 	return connect.NewResponse(&queryv1.ListCarModelsResponse{}), nil
 }
 
-// ---- YAML parsing tests ----
+func (m *mockQueryClient) ListDrivers(
+	ctx context.Context,
+	req *connect.Request[queryv1.ListDriversRequest],
+) (*connect.Response[queryv1.ListDriversResponse], error) {
+	if m.listDrivers != nil {
+		return m.listDrivers(ctx, req)
+	}
 
+	return connect.NewResponse(&queryv1.ListDriversResponse{}), nil
+}
+
+func (m *mockQueryClient) ListEvents(
+	ctx context.Context,
+	req *connect.Request[queryv1.ListEventsRequest],
+) (*connect.Response[queryv1.ListEventsResponse], error) {
+	if m.listEvents != nil {
+		return m.listEvents(ctx, req)
+	}
+
+	return connect.NewResponse(&queryv1.ListEventsResponse{}), nil
+}
+
+func (m *mockQueryClient) ListRaces(
+	ctx context.Context,
+	req *connect.Request[queryv1.ListRacesRequest],
+) (*connect.Response[queryv1.ListRacesResponse], error) {
+	if m.listRaces != nil {
+		return m.listRaces(ctx, req)
+	}
+
+	return connect.NewResponse(&queryv1.ListRacesResponse{}), nil
+}
+
+// ---- YAML parsing tests ----
+//
+//nolint:gocyclo // test function with multiple assertions
 func TestLoadConfig_ValidYAML(t *testing.T) {
 	t.Parallel()
 
 	cfg, err := loadConfig("testdata/fixture.yml")
 	if err != nil {
 		t.Fatalf("loadConfig returned error: %v", err)
+	}
+
+	if len(cfg.Drivers) != 1 {
+		t.Fatalf("expected 1 driver, got %d", len(cfg.Drivers))
+	}
+
+	if cfg.Drivers[0].Name != "Max Verstappen" {
+		t.Errorf(
+			"expected driver name %q, got %q",
+			"Max Verstappen", cfg.Drivers[0].Name,
+		)
 	}
 
 	if len(cfg.PointSystems) != 1 {
@@ -393,8 +519,36 @@ func TestLoadConfig_ValidYAML(t *testing.T) {
 		t.Errorf("expected simulation name %q, got %q", "iRacing", sim.Name)
 	}
 
+	if !sim.IsActive {
+		t.Error("expected simulation isActive=true")
+	}
+
 	if len(sim.Series) != 1 || sim.Series[0].Name != "Porsche Cup" {
 		t.Errorf("unexpected series in simulation: %+v", sim.Series)
+	}
+
+	seasons := sim.Series[0].Seasons
+	if len(seasons) != 1 || seasons[0].Name != "Saison XVIII" {
+		t.Errorf("unexpected seasons: %+v", seasons)
+	}
+
+	events := seasons[0].Events
+	if len(events) != 1 || events[0].Name != "Round 1 - Interlagos" {
+		t.Errorf("unexpected events: %+v", events)
+	}
+
+	if events[0].TrackLayout != "Grand Prix" {
+		t.Errorf("expected trackLayout %q, got %q", "Grand Prix", events[0].TrackLayout)
+	}
+
+	races := events[0].Races
+	if len(races) != 1 || races[0].Name != "Race 1" {
+		t.Errorf("unexpected races: %+v", races)
+	}
+
+	if races[0].SessionType != "RACE_SESSION_TYPE_RACE" {
+		t.Errorf("expected sessionType %q, got %q",
+			"RACE_SESSION_TYPE_RACE", races[0].SessionType)
 	}
 
 	if len(cfg.Tracks) != 1 || cfg.Tracks[0].Name != "Interlagos" {
@@ -520,10 +674,13 @@ func TestSetupRunner_CreateEntities(t *testing.T) {
 	}
 
 	out := buf.String()
+	assertContains(t, out, `created driver "Max Verstappen"`)
 	assertContains(t, out, `created point-system "Standard"`)
 	assertContains(t, out, `created simulation "iRacing"`)
 	assertContains(t, out, `created series "Porsche Cup"`)
 	assertContains(t, out, `created season "Saison XVIII"`)
+	assertContains(t, out, `created event "Round 1 - Interlagos"`)
+	assertContains(t, out, `created race "Race 1"`)
 	assertContains(t, out, `created car-manufacturer "Porsche"`)
 	assertContains(t, out, `created car-brand "Porsche 911"`)
 	assertContains(t, out, `created car-model "Porsche 911 GT3 Cup (992)"`)
@@ -551,10 +708,13 @@ func TestSetupRunner_ExistingEntities(t *testing.T) {
 	}
 
 	out := buf.String()
+	assertContains(t, out, `existing driver "Max Verstappen"`)
 	assertContains(t, out, `existing point-system "Standard"`)
 	assertContains(t, out, `existing simulation "iRacing"`)
 	assertContains(t, out, `existing series "Porsche Cup"`)
 	assertContains(t, out, `existing season "Saison XVIII"`)
+	assertContains(t, out, `existing event "Round 1 - Interlagos"`)
+	assertContains(t, out, `existing race "Race 1"`)
 	assertContains(t, out, `existing car-manufacturer "Porsche"`)
 	assertContains(t, out, `existing car-brand "Porsche 911"`)
 	assertContains(t, out, `existing car-model "Porsche 911 GT3 Cup (992)"`)
@@ -598,6 +758,376 @@ func TestSetupRunner_DryRun(t *testing.T) {
 	}
 
 	assertContains(t, buf.String(), `dry-run: would create simulation "iRacing"`)
+}
+
+// ---- runner: driver create / skip-if-existing ----
+
+func TestSetupRunner_CreateDriver(t *testing.T) {
+	t.Parallel()
+
+	var capturedName string
+
+	var capturedExternalID string
+
+	var capturedIsActive bool
+
+	cmd := &mockCommandClient{
+		createDriver: func(
+			_ context.Context,
+			req *connect.Request[commandv1.CreateDriverRequest],
+		) (*connect.Response[commandv1.CreateDriverResponse], error) {
+			capturedName = req.Msg.GetName()
+			capturedExternalID = req.Msg.GetExternalId()
+			capturedIsActive = req.Msg.GetIsActive()
+
+			resp := &commandv1.CreateDriverResponse{}
+			d := &commonv1.Driver{}
+			d.SetId(40)
+			d.SetName(req.Msg.GetName())
+			resp.SetDriver(d)
+
+			return connect.NewResponse(resp), nil
+		},
+	}
+
+	var buf bytes.Buffer
+
+	runner := &setupRunner{
+		filePath: "testdata/fixture.yml",
+		dryRun:   false,
+		out:      &buf,
+		cmdSvc:   cmd,
+		qrySvc:   &mockQueryClient{},
+	}
+
+	if err := runner.run(context.Background()); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+
+	if capturedName != "Max Verstappen" {
+		t.Errorf("expected driver name %q, got %q", "Max Verstappen", capturedName)
+	}
+
+	if capturedExternalID != "830" {
+		t.Errorf("expected externalId=%q, got %q", "830", capturedExternalID)
+	}
+
+	if !capturedIsActive {
+		t.Error("expected isActive=true")
+	}
+
+	assertContains(t, buf.String(), `created driver "Max Verstappen"`)
+}
+
+func TestSetupRunner_ExistingDriver(t *testing.T) {
+	t.Parallel()
+
+	createCalled := false
+	cmd := &mockCommandClient{
+		createDriver: func(
+			_ context.Context,
+			_ *connect.Request[commandv1.CreateDriverRequest],
+		) (*connect.Response[commandv1.CreateDriverResponse], error) {
+			createCalled = true
+
+			return connect.NewResponse(&commandv1.CreateDriverResponse{}), nil
+		},
+	}
+
+	qry := &mockQueryClient{
+		listDrivers: func(
+			_ context.Context,
+			_ *connect.Request[queryv1.ListDriversRequest],
+		) (*connect.Response[queryv1.ListDriversResponse], error) {
+			d := &commonv1.Driver{}
+			d.SetId(40)
+			d.SetName("Max Verstappen")
+			resp := &queryv1.ListDriversResponse{}
+			resp.SetItems([]*commonv1.Driver{d})
+
+			return connect.NewResponse(resp), nil
+		},
+	}
+
+	var buf bytes.Buffer
+
+	runner := &setupRunner{
+		filePath: "testdata/fixture.yml",
+		dryRun:   false,
+		out:      &buf,
+		cmdSvc:   cmd,
+		qrySvc:   qry,
+	}
+
+	if err := runner.run(context.Background()); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+
+	if createCalled {
+		t.Error("expected no createDriver call for existing driver, but it was called")
+	}
+
+	assertContains(t, buf.String(), `existing driver "Max Verstappen"`)
+}
+
+// ---- runner: event create / skip-if-existing ----
+
+func TestSetupRunner_CreateEvent(t *testing.T) {
+	t.Parallel()
+
+	var capturedSeasonID uint32
+
+	var capturedLayoutID uint32
+
+	var capturedName string
+
+	cmd := &mockCommandClient{
+		createEvent: func(
+			_ context.Context,
+			req *connect.Request[commandv1.CreateEventRequest],
+		) (*connect.Response[commandv1.CreateEventResponse], error) {
+			capturedSeasonID = req.Msg.GetSeasonId()
+			capturedLayoutID = req.Msg.GetTrackLayoutId()
+			capturedName = req.Msg.GetName()
+
+			resp := &commandv1.CreateEventResponse{}
+			e := &commonv1.Event{}
+			e.SetId(50)
+			e.SetName(req.Msg.GetName())
+			resp.SetEvent(e)
+
+			return connect.NewResponse(resp), nil
+		},
+	}
+
+	var buf bytes.Buffer
+
+	runner := &setupRunner{
+		filePath: "testdata/fixture.yml",
+		dryRun:   false,
+		out:      &buf,
+		cmdSvc:   cmd,
+		qrySvc:   &mockQueryClient{},
+	}
+
+	if err := runner.run(context.Background()); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+
+	if capturedName != "Round 1 - Interlagos" {
+		t.Errorf("expected event name %q, got %q", "Round 1 - Interlagos", capturedName)
+	}
+
+	if capturedSeasonID == 0 {
+		t.Error("expected non-zero seasonId on CreateEvent request")
+	}
+
+	if capturedLayoutID == 0 {
+		t.Error("expected non-zero trackLayoutId on CreateEvent request")
+	}
+
+	assertContains(t, buf.String(), `created event "Round 1 - Interlagos"`)
+}
+
+func TestSetupRunner_ExistingEventSkipsRaces(t *testing.T) {
+	t.Parallel()
+
+	raceCreateCalled := false
+	cmd := &mockCommandClient{
+		createRace: func(
+			_ context.Context,
+			_ *connect.Request[commandv1.CreateRaceRequest],
+		) (*connect.Response[commandv1.CreateRaceResponse], error) {
+			raceCreateCalled = true
+
+			return connect.NewResponse(&commandv1.CreateRaceResponse{}), nil
+		},
+	}
+
+	qry := &mockQueryClient{
+		listRaces: func(
+			_ context.Context,
+			_ *connect.Request[queryv1.ListRacesRequest],
+		) (*connect.Response[queryv1.ListRacesResponse], error) {
+			rc := &commonv1.Race{}
+			rc.SetId(51)
+			rc.SetName("Race 1")
+			resp := &queryv1.ListRacesResponse{}
+			resp.SetItems([]*commonv1.Race{rc})
+
+			return connect.NewResponse(resp), nil
+		},
+	}
+
+	var buf bytes.Buffer
+
+	runner := &setupRunner{
+		filePath: "testdata/fixture.yml",
+		dryRun:   false,
+		out:      &buf,
+		cmdSvc:   cmd,
+		qrySvc:   qry,
+	}
+
+	if err := runner.run(context.Background()); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+
+	if raceCreateCalled {
+		t.Error("race must not be created when it already exists")
+	}
+
+	assertContains(t, buf.String(), `existing race "Race 1"`)
+}
+
+// ---- runner: race create when event was newly provisioned ----
+
+func TestSetupRunner_NewEventCreatesRaces(t *testing.T) {
+	t.Parallel()
+
+	var capturedRaceName string
+
+	var capturedSessionType commonv1.RaceSessionType
+
+	var capturedSequenceNo int32
+
+	cmd := &mockCommandClient{
+		createRace: func(
+			_ context.Context,
+			req *connect.Request[commandv1.CreateRaceRequest],
+		) (*connect.Response[commandv1.CreateRaceResponse], error) {
+			capturedRaceName = req.Msg.GetName()
+			capturedSessionType = req.Msg.GetSessionType()
+			capturedSequenceNo = req.Msg.GetSequenceNo()
+
+			resp := &commandv1.CreateRaceResponse{}
+			rc := &commonv1.Race{}
+			rc.SetId(51)
+			rc.SetName(req.Msg.GetName())
+			resp.SetRace(rc)
+
+			return connect.NewResponse(resp), nil
+		},
+	}
+
+	var buf bytes.Buffer
+
+	runner := &setupRunner{
+		filePath: "testdata/fixture.yml",
+		dryRun:   false,
+		out:      &buf,
+		cmdSvc:   cmd,
+		qrySvc:   &mockQueryClient{},
+	}
+
+	if err := runner.run(context.Background()); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+
+	if capturedRaceName != "Race 1" {
+		t.Errorf("expected race name %q, got %q", "Race 1", capturedRaceName)
+	}
+
+	if capturedSessionType != commonv1.RaceSessionType_RACE_SESSION_TYPE_RACE {
+		t.Errorf(
+			"expected sessionType %v, got %v",
+			commonv1.RaceSessionType_RACE_SESSION_TYPE_RACE, capturedSessionType,
+		)
+	}
+
+	if capturedSequenceNo != 1 {
+		t.Errorf("expected sequenceNo=1, got %d", capturedSequenceNo)
+	}
+
+	assertContains(t, buf.String(), `created race "Race 1"`)
+}
+
+// ---- runner: validation tests for new entities ----
+
+func TestValidateConfig_MissingDriverName(t *testing.T) {
+	t.Parallel()
+
+	cfg := &SetupConfig{
+		Drivers: []DriverConfig{{Name: ""}},
+	}
+
+	err := cfg.validate()
+	if err == nil {
+		t.Fatal("expected validation error for empty driver name, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "drivers[0]") {
+		t.Errorf("expected error to mention drivers[0], got: %v", err)
+	}
+}
+
+func TestValidateConfig_MissingEventName(t *testing.T) {
+	t.Parallel()
+
+	cfg := &SetupConfig{
+		Simulations: []SimulationConfig{
+			{
+				Name: "iRacing",
+				Series: []SeriesConfig{
+					{
+						Name: "Porsche Cup",
+						Seasons: []SeasonConfig{
+							{
+								Name:   "Saison XVIII",
+								Events: []EventConfig{{Name: ""}},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := cfg.validate()
+	if err == nil {
+		t.Fatal("expected validation error for empty event name, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "events[0]") {
+		t.Errorf("expected error to mention events[0], got: %v", err)
+	}
+}
+
+func TestValidateConfig_MissingRaceName(t *testing.T) {
+	t.Parallel()
+
+	cfg := &SetupConfig{
+		Simulations: []SimulationConfig{
+			{
+				Name: "iRacing",
+				Series: []SeriesConfig{
+					{
+						Name: "Porsche Cup",
+						Seasons: []SeasonConfig{
+							{
+								Name: "Saison XVIII",
+								Events: []EventConfig{
+									{
+										Name:  "Round 1",
+										Races: []RaceConfig{{Name: ""}},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := cfg.validate()
+	if err == nil {
+		t.Fatal("expected validation error for empty race name, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "races[0]") {
+		t.Errorf("expected error to mention races[0], got: %v", err)
+	}
 }
 
 // ---- runner: parent-child scoping ----
@@ -674,10 +1204,10 @@ func TestSetupRunner_E2E_FixtureFile(t *testing.T) {
 		t.Fatalf("run returned error: %v", err)
 	}
 
-	// Verify all 9 entity types were provisioned.
+	// Verify all 12 entity types were provisioned.
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
-	if len(lines) != 9 {
-		t.Errorf("expected 9 output lines, got %d:\n%s", len(lines), buf.String())
+	if len(lines) != 12 {
+		t.Errorf("expected 12 output lines, got %d:\n%s", len(lines), buf.String())
 	}
 
 	// Running again with all entities existing must not create anything.
@@ -699,15 +1229,18 @@ func TestSetupRunner_E2E_FixtureFile(t *testing.T) {
 // fixture entities as already existing, so the runner never calls create.
 func existingEntitiesQueryClient() *mockQueryClient {
 	return buildExistingQueryClient(fixtureIDs{
-		simID:   1,
-		srID:    2,
-		snID:    3,
-		psID:    10,
-		trackID: 20,
-		layID:   21,
-		mfrID:   30,
-		brandID: 31,
-		modelID: 32,
+		simID:    1,
+		srID:     2,
+		snID:     3,
+		psID:     10,
+		trackID:  20,
+		layID:    21,
+		mfrID:    30,
+		brandID:  31,
+		modelID:  32,
+		driverID: 40,
+		eventID:  50,
+		raceID:   51,
 	})
 }
 
@@ -716,6 +1249,9 @@ type fixtureIDs struct {
 	psID                    uint32
 	trackID, layID          uint32
 	mfrID, brandID, modelID uint32
+	driverID                uint32
+	eventID                 uint32
+	raceID                  uint32
 }
 
 func buildExistingQueryClient(ids fixtureIDs) *mockQueryClient {
@@ -729,6 +1265,9 @@ func buildExistingQueryClient(ids fixtureIDs) *mockQueryClient {
 	qry.listCarManufacturers = buildExistingCarManufacturers(ids)
 	qry.listCarBrands = buildExistingCarBrands(ids)
 	qry.listCarModels = buildExistingCarModels(ids)
+	qry.listDrivers = buildExistingDrivers(ids)
+	qry.listEvents = buildExistingEvents(ids)
+	qry.listRaces = buildExistingRaces(ids)
 
 	return qry
 }
@@ -886,6 +1425,59 @@ func buildExistingCarModels(ids fixtureIDs) func(
 		m.SetBrandId(ids.brandID)
 		resp := &queryv1.ListCarModelsResponse{}
 		resp.SetItems([]*commonv1.CarModel{m})
+
+		return connect.NewResponse(resp), nil
+	}
+}
+
+func buildExistingDrivers(ids fixtureIDs) func(
+	context.Context, *connect.Request[queryv1.ListDriversRequest],
+) (*connect.Response[queryv1.ListDriversResponse], error) {
+	return func(
+		_ context.Context,
+		_ *connect.Request[queryv1.ListDriversRequest],
+	) (*connect.Response[queryv1.ListDriversResponse], error) {
+		d := &commonv1.Driver{}
+		d.SetId(ids.driverID)
+		d.SetName("Max Verstappen")
+		resp := &queryv1.ListDriversResponse{}
+		resp.SetItems([]*commonv1.Driver{d})
+
+		return connect.NewResponse(resp), nil
+	}
+}
+
+func buildExistingEvents(ids fixtureIDs) func(
+	context.Context, *connect.Request[queryv1.ListEventsRequest],
+) (*connect.Response[queryv1.ListEventsResponse], error) {
+	return func(
+		_ context.Context,
+		_ *connect.Request[queryv1.ListEventsRequest],
+	) (*connect.Response[queryv1.ListEventsResponse], error) {
+		e := &commonv1.Event{}
+		e.SetId(ids.eventID)
+		e.SetName("Round 1 - Interlagos")
+		e.SetSeasonId(ids.snID)
+		resp := &queryv1.ListEventsResponse{}
+		resp.SetItems([]*commonv1.Event{e})
+
+		return connect.NewResponse(resp), nil
+	}
+}
+
+func buildExistingRaces(ids fixtureIDs) func(
+	context.Context, *connect.Request[queryv1.ListRacesRequest],
+) (*connect.Response[queryv1.ListRacesResponse], error) {
+	return func(
+		_ context.Context,
+		_ *connect.Request[queryv1.ListRacesRequest],
+	) (*connect.Response[queryv1.ListRacesResponse], error) {
+		rc := &commonv1.Race{}
+		rc.SetId(ids.raceID)
+		rc.SetName("Race 1")
+		rc.SetEventId(ids.eventID)
+		resp := &queryv1.ListRacesResponse{}
+		resp.SetItems([]*commonv1.Race{rc})
 
 		return connect.NewResponse(resp), nil
 	}

@@ -1,13 +1,29 @@
+drivers:
+  - name: Max Verstappen
+    externalId: "830"
+    isActive: true
+
 pointSystems:
   - name: Standard
 
 simulations:
   - name: iRacing
+    isActive: true
     series:
       - name: Porsche Cup
         seasons:
           - name: Saison XVIII
             pointSystem: Standard
+            events:
+              - name: Round 1 - Interlagos
+                trackLayout: Grand Prix
+                date: "2026-03-01"
+                status: upcoming
+                processingState: pending
+                races:
+                  - name: Race 1
+                    sessionType: RACE_SESSION_TYPE_RACE
+                    sequenceNo: 1
 
 carManufacturers:
   - name: Porsche

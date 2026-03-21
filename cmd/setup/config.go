@@ -3,12 +3,14 @@ package setup
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 // SetupConfig is the root configuration for the setup command.
 type SetupConfig struct {
+	Drivers          []DriverConfig          `yaml:"drivers"`
 	PointSystems     []PointSystemConfig     `yaml:"pointSystems"`
 	Simulations      []SimulationConfig      `yaml:"simulations"`
 	CarManufacturers []CarManufacturerConfig `yaml:"carManufacturers"`
@@ -20,10 +22,18 @@ type PointSystemConfig struct {
 	Name string `yaml:"name"`
 }
 
+// DriverConfig defines a driver to be created.
+type DriverConfig struct {
+	Name       string `yaml:"name"`
+	ExternalID string `yaml:"externalId"`
+	IsActive   bool   `yaml:"isActive"`
+}
+
 // SimulationConfig defines a simulation and its child series.
 type SimulationConfig struct {
-	Name   string         `yaml:"name"`
-	Series []SeriesConfig `yaml:"series"`
+	Name     string         `yaml:"name"`
+	IsActive bool           `yaml:"isActive"`
+	Series   []SeriesConfig `yaml:"series"`
 }
 
 // SeriesConfig defines a series and its child seasons.
@@ -34,8 +44,26 @@ type SeriesConfig struct {
 
 // SeasonConfig defines a season and its associated point system name.
 type SeasonConfig struct {
+	Name        string        `yaml:"name"`
+	PointSystem string        `yaml:"pointSystem"`
+	Events      []EventConfig `yaml:"events"`
+}
+
+// EventConfig defines an event under a season.
+type EventConfig struct {
+	Name            string       `yaml:"name"`
+	TrackLayout     string       `yaml:"trackLayout"`
+	Date            string       `yaml:"date"`
+	Status          string       `yaml:"status"`
+	ProcessingState string       `yaml:"processingState"`
+	Races           []RaceConfig `yaml:"races"`
+}
+
+// RaceConfig defines a race under an event.
+type RaceConfig struct {
 	Name        string `yaml:"name"`
-	PointSystem string `yaml:"pointSystem"`
+	SessionType string `yaml:"sessionType"`
+	SequenceNo  int32  `yaml:"sequenceNo"`
 }
 
 // CarManufacturerConfig defines a car manufacturer and its child brands.
@@ -86,6 +114,10 @@ func loadConfig(filePath string) (*SetupConfig, error) {
 }
 
 func (c *SetupConfig) validate() error {
+	if err := validateDrivers(c.Drivers); err != nil {
+		return err
+	}
+
 	if err := validatePointSystems(c.PointSystems); err != nil {
 		return err
 	}
@@ -105,6 +137,17 @@ func validatePointSystems(items []PointSystemConfig) error {
 	for i, ps := range items {
 		if ps.Name == "" {
 			return fmt.Errorf("pointSystems[%d]: name is required", i)
+		}
+	}
+
+	return nil
+}
+
+func validateDrivers(items []DriverConfig) error {
+	for i := range items {
+		d := items[i]
+		if d.Name == "" {
+			return fmt.Errorf("drivers[%d]: name is required", i)
 		}
 	}
 
@@ -148,6 +191,54 @@ func validateSeasonList(simIdx, serIdx int, seasons []SeasonConfig) error {
 			return fmt.Errorf(
 				"simulations[%d].series[%d].seasons[%d]: name is required",
 				simIdx, serIdx, k,
+			)
+		}
+
+		if err := validateEvents(simIdx, serIdx, k, seasons[k].Events); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateEvents(simIdx, serIdx, snIdx int, events []EventConfig) error {
+	for i := range events {
+		if events[i].Name == "" {
+			return fmt.Errorf(
+				"simulations[%d].series[%d].seasons[%d].events[%d]: name is required",
+				simIdx, serIdx, snIdx, i,
+			)
+		}
+
+		if events[i].Date != "" {
+			if _, err := time.Parse(time.DateOnly, events[i].Date); err != nil {
+				//nolint:lll // readability
+				return fmt.Errorf(
+					"simulations[%d].series[%d].seasons[%d].events[%d]: invalid date %q (expected YYYY-MM-DD)",
+					simIdx,
+					serIdx,
+					snIdx,
+					i,
+					events[i].Date,
+				)
+			}
+		}
+
+		if err := validateRaces(simIdx, serIdx, snIdx, i, events[i].Races); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func validateRaces(simIdx, serIdx, snIdx, evIdx int, races []RaceConfig) error {
+	for i := range races {
+		if races[i].Name == "" {
+			return fmt.Errorf(
+				"simulations[%d].series[%d].seasons[%d].events[%d].races[%d]: name is required",
+				simIdx, serIdx, snIdx, evIdx, i,
 			)
 		}
 	}

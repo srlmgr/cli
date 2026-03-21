@@ -1,4 +1,3 @@
-//nolint:dupl // methods are similar by design
 package setup
 
 import (
@@ -16,10 +15,16 @@ type setupRunner struct {
 }
 
 // run loads the config and provisions all entities in the required order.
+//
+//nolint:govet // by design
 func (r *setupRunner) run(ctx context.Context) error {
 	cfg, err := loadConfig(r.filePath)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
+	}
+
+	if err := r.setupDrivers(ctx, cfg.Drivers); err != nil {
+		return fmt.Errorf("setup drivers: %w", err)
 	}
 
 	psIDs, err := r.setupPointSystems(ctx, cfg.PointSystems)
@@ -27,7 +32,12 @@ func (r *setupRunner) run(ctx context.Context) error {
 		return fmt.Errorf("setup point systems: %w", err)
 	}
 
-	if err := r.setupSimulations(ctx, cfg.Simulations, psIDs); err != nil {
+	layoutIDs, err := r.setupTracks(ctx, cfg.Tracks)
+	if err != nil {
+		return fmt.Errorf("setup tracks: %w", err)
+	}
+
+	if err := r.setupSimulations(ctx, cfg.Simulations, psIDs, layoutIDs); err != nil {
 		return fmt.Errorf("setup simulations: %w", err)
 	}
 
@@ -35,8 +45,24 @@ func (r *setupRunner) run(ctx context.Context) error {
 		return fmt.Errorf("setup car manufacturers: %w", err)
 	}
 
-	if err := r.setupTracks(ctx, cfg.Tracks); err != nil {
-		return fmt.Errorf("setup tracks: %w", err)
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupDrivers(
+	ctx context.Context,
+	drivers []DriverConfig,
+) error {
+	for i := range drivers {
+		d := drivers[i]
+		id, created, err := r.ensureDriver(ctx, d)
+		if err != nil {
+			return fmt.Errorf("driver %q: %w", d.Name, err)
+		}
+
+		if err := r.printResult("driver", d.Name, id, created); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -70,9 +96,10 @@ func (r *setupRunner) setupSimulations(
 	ctx context.Context,
 	sims []SimulationConfig,
 	psIDs map[string]uint32,
+	layoutIDs map[string]uint32,
 ) error {
 	for i := range sims {
-		simID, created, err := r.ensureSimulation(ctx, sims[i].Name)
+		simID, created, err := r.ensureSimulation(ctx, sims[i].Name, sims[i].IsActive)
 		if err != nil {
 			return fmt.Errorf("simulation %q: %w", sims[i].Name, err)
 		}
@@ -81,7 +108,12 @@ func (r *setupRunner) setupSimulations(
 			return err
 		}
 
-		if err := r.setupSeriesList(ctx, simID, sims[i].Series, psIDs); err != nil {
+		if err := r.setupSeriesList(
+			ctx,
+			simID,
+			sims[i].Series,
+			psIDs,
+			layoutIDs); err != nil {
 			return fmt.Errorf("simulation %q series: %w", sims[i].Name, err)
 		}
 	}
@@ -95,6 +127,7 @@ func (r *setupRunner) setupSeriesList(
 	simID uint32,
 	series []SeriesConfig,
 	psIDs map[string]uint32,
+	layoutIDs map[string]uint32,
 ) error {
 	for i := range series {
 		srID, created, err := r.ensureSeries(ctx, simID, series[i].Name)
@@ -106,7 +139,13 @@ func (r *setupRunner) setupSeriesList(
 			return err
 		}
 
-		if err := r.setupSeasonList(ctx, srID, series[i].Seasons, psIDs); err != nil {
+		if err := r.setupSeasonList(
+			ctx,
+			srID,
+			series[i].Seasons,
+			psIDs,
+			layoutIDs,
+		); err != nil {
 			return fmt.Errorf("series %q seasons: %w", series[i].Name, err)
 		}
 	}
@@ -120,6 +159,7 @@ func (r *setupRunner) setupSeasonList(
 	seriesID uint32,
 	seasons []SeasonConfig,
 	psIDs map[string]uint32,
+	layoutIDs map[string]uint32,
 ) error {
 	for i := range seasons {
 		psID := psIDs[seasons[i].PointSystem]
@@ -130,6 +170,66 @@ func (r *setupRunner) setupSeasonList(
 		}
 
 		if err := r.printResult("season", seasons[i].Name, snID, created); err != nil {
+			return err
+		}
+
+		if err := r.setupEventList(ctx, snID, seasons[i].Events, layoutIDs); err != nil {
+			return fmt.Errorf("season %q events: %w", seasons[i].Name, err)
+		}
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupEventList(
+	ctx context.Context,
+	seasonID uint32,
+	events []EventConfig,
+	layoutIDs map[string]uint32,
+) error {
+	for i := range events {
+		if events[i].TrackLayout != "" {
+			if _, ok := layoutIDs[events[i].TrackLayout]; !ok {
+				return fmt.Errorf(
+					"event %q: track layout %q not found; ensure it is defined under tracks",
+					events[i].Name, events[i].TrackLayout,
+				)
+			}
+		}
+
+		layoutID := layoutIDs[events[i].TrackLayout]
+
+		evID, created, err := r.ensureEvent(ctx, seasonID, layoutID, &events[i])
+		if err != nil {
+			return fmt.Errorf("event %q: %w", events[i].Name, err)
+		}
+
+		if err := r.printResult("event", events[i].Name, evID, created); err != nil {
+			return err
+		}
+
+		if err := r.setupRaceList(ctx, evID, events[i].Races); err != nil {
+			return fmt.Errorf("event %q races: %w", events[i].Name, err)
+		}
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupRaceList(
+	ctx context.Context,
+	eventID uint32,
+	races []RaceConfig,
+) error {
+	for i := range races {
+		id, created, err := r.ensureRace(ctx, eventID, races[i])
+		if err != nil {
+			return fmt.Errorf("race %q: %w", races[i].Name, err)
+		}
+
+		if err := r.printResult("race", races[i].Name, id, created); err != nil {
 			return err
 		}
 	}
@@ -208,23 +308,25 @@ func (r *setupRunner) setupModelList(
 func (r *setupRunner) setupTracks(
 	ctx context.Context,
 	tracks []TrackConfig,
-) error {
+) (map[string]uint32, error) {
+	layoutIDs := make(map[string]uint32)
+
 	for i := range tracks {
 		trackID, created, err := r.ensureTrack(ctx, tracks[i].Name)
 		if err != nil {
-			return fmt.Errorf("track %q: %w", tracks[i].Name, err)
+			return nil, fmt.Errorf("track %q: %w", tracks[i].Name, err)
 		}
 
 		if err := r.printResult("track", tracks[i].Name, trackID, created); err != nil {
-			return err
+			return nil, err
 		}
 
-		if err := r.setupLayoutList(ctx, trackID, tracks[i].Layouts); err != nil {
-			return fmt.Errorf("track %q layouts: %w", tracks[i].Name, err)
+		if err := r.setupLayoutList(ctx, trackID, tracks[i].Layouts, layoutIDs); err != nil {
+			return nil, fmt.Errorf("track %q layouts: %w", tracks[i].Name, err)
 		}
 	}
 
-	return nil
+	return layoutIDs, nil
 }
 
 //nolint:whitespace // editor/linter issue
@@ -232,6 +334,7 @@ func (r *setupRunner) setupLayoutList(
 	ctx context.Context,
 	trackID uint32,
 	layouts []LayoutConfig,
+	layoutIDs map[string]uint32,
 ) error {
 	for i := range layouts {
 		layID, created, err := r.ensureTrackLayout(ctx, trackID, layouts[i].Name)
@@ -242,6 +345,8 @@ func (r *setupRunner) setupLayoutList(
 		if err := r.printResult("track-layout", layouts[i].Name, layID, created); err != nil {
 			return err
 		}
+
+		layoutIDs[layouts[i].Name] = layID
 	}
 
 	return nil
