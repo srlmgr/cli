@@ -128,4 +128,9 @@ type queryClient interface {
 		context.Context,
 		*connect.Request[queryv1.ListEventsRequest],
 	) (*connect.Response[queryv1.ListEventsResponse], error)
+
+	ListRaces(
+		context.Context,
+		*connect.Request[queryv1.ListRacesRequest],
+	) (*connect.Response[queryv1.ListRacesResponse], error)
 }

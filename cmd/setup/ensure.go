@@ -415,31 +415,58 @@ func (r *setupRunner) ensureEvent(
 	)
 }
 
-// createRace unconditionally creates a race under the given event.
-// There is no ListRaces endpoint, so this is called only when the parent event
-// was newly provisioned in the same run. If the setup run is interrupted after
-// event creation but before race creation completes, re-running will detect the
-// event as existing and skip race provisioning entirely.
-//
 //nolint:whitespace // editor/linter issue
-func (r *setupRunner) createRace(
+func (r *setupRunner) ensureRace(
 	ctx context.Context, eventID uint32, cfg RaceConfig,
-) (uint32, error) {
-	if r.dryRun {
-		return 0, nil
-	}
+) (uint32, bool, error) {
+	return findOrCreate(ctx,
+		func(ctx context.Context) ([]*commonv1.Race, error) {
+			resp, err := r.qrySvc.ListRaces(ctx,
+				connect.NewRequest(&queryv1.ListRacesRequest{
+					EventId: eventID,
+				}),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("list races: %w", err)
+			}
 
-	resp, err := r.cmdSvc.CreateRace(ctx,
-		connect.NewRequest(&commandv1.CreateRaceRequest{
-			EventId:     eventID,
-			Name:        cfg.Name,
-			SessionType: cfg.SessionType,
-			SequenceNo:  cfg.SequenceNo,
-		}),
+			return resp.Msg.GetItems(), nil
+		},
+		func(rc *commonv1.Race) bool { return rc.GetName() == cfg.Name },
+		func(rc *commonv1.Race) uint32 { return rc.GetId() },
+		func(ctx context.Context) (uint32, error) {
+			enumVal, ok := commonv1.RaceSessionType_value[cfg.SessionType]
+			if !ok {
+				return 0, fmt.Errorf(
+					"unknown sessionType %q; valid values: %v",
+					cfg.SessionType, validRaceSessionTypes(),
+				)
+			}
+
+			resp, err := r.cmdSvc.CreateRace(ctx,
+				connect.NewRequest(&commandv1.CreateRaceRequest{
+					EventId:     eventID,
+					Name:        cfg.Name,
+					SessionType: commonv1.RaceSessionType(enumVal),
+					SequenceNo:  cfg.SequenceNo,
+				}),
+			)
+			if err != nil {
+				return 0, fmt.Errorf("create race: %w", err)
+			}
+
+			return resp.Msg.GetRace().GetId(), nil
+		},
+		r.dryRun,
 	)
-	if err != nil {
-		return 0, fmt.Errorf("create race: %w", err)
-	}
+}
 
-	return resp.Msg.GetRace().GetId(), nil
+// validRaceSessionTypes returns the list of valid session type enum names.
+func validRaceSessionTypes() []string {
+names := make([]string, 0, len(commonv1.RaceSessionType_value))
+for name := range commonv1.RaceSessionType_value {
+names = append(names, name)
+}
+
+return names
 }

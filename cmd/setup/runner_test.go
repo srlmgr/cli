@@ -338,6 +338,11 @@ type mockQueryClient struct {
 		context.Context,
 		*connect.Request[queryv1.ListEventsRequest],
 	) (*connect.Response[queryv1.ListEventsResponse], error)
+
+	listRaces func(
+		context.Context,
+		*connect.Request[queryv1.ListRacesRequest],
+	) (*connect.Response[queryv1.ListRacesResponse], error)
 }
 
 func (m *mockQueryClient) ListSimulations(
@@ -461,6 +466,17 @@ func (m *mockQueryClient) ListEvents(
 	return connect.NewResponse(&queryv1.ListEventsResponse{}), nil
 }
 
+func (m *mockQueryClient) ListRaces(
+	ctx context.Context,
+	req *connect.Request[queryv1.ListRacesRequest],
+) (*connect.Response[queryv1.ListRacesResponse], error) {
+	if m.listRaces != nil {
+		return m.listRaces(ctx, req)
+	}
+
+	return connect.NewResponse(&queryv1.ListRacesResponse{}), nil
+}
+
 // ---- YAML parsing tests ----
 
 func TestLoadConfig_ValidYAML(t *testing.T) {
@@ -527,6 +543,10 @@ func TestLoadConfig_ValidYAML(t *testing.T) {
 	races := events[0].Races
 	if len(races) != 1 || races[0].Name != "Race 1" {
 		t.Errorf("unexpected races: %+v", races)
+	}
+
+	if races[0].SessionType != "RACE_SESSION_TYPE_RACE" {
+		t.Errorf("expected sessionType %q, got %q", "RACE_SESSION_TYPE_RACE", races[0].SessionType)
 	}
 
 	if len(cfg.Tracks) != 1 || cfg.Tracks[0].Name != "Interlagos" {
@@ -692,6 +712,7 @@ func TestSetupRunner_ExistingEntities(t *testing.T) {
 	assertContains(t, out, `existing series "Porsche Cup"`)
 	assertContains(t, out, `existing season "Saison XVIII"`)
 	assertContains(t, out, `existing event "Round 1 - Interlagos"`)
+	assertContains(t, out, `existing race "Race 1"`)
 	assertContains(t, out, `existing car-manufacturer "Porsche"`)
 	assertContains(t, out, `existing car-brand "Porsche 911"`)
 	assertContains(t, out, `existing car-model "Porsche 911 GT3 Cup (992)"`)
@@ -744,7 +765,7 @@ func TestSetupRunner_CreateDriver(t *testing.T) {
 
 	var capturedName string
 
-	var capturedExternalID uint32
+	var capturedExternalID string
 
 	var capturedIsActive bool
 
@@ -785,8 +806,8 @@ func TestSetupRunner_CreateDriver(t *testing.T) {
 		t.Errorf("expected driver name %q, got %q", "Max Verstappen", capturedName)
 	}
 
-	if capturedExternalID != 830 {
-		t.Errorf("expected externalId=830, got %d", capturedExternalID)
+	if capturedExternalID != "830" {
+		t.Errorf("expected externalId=%q, got %q", "830", capturedExternalID)
 	}
 
 	if !capturedIsActive {
@@ -922,15 +943,15 @@ func TestSetupRunner_ExistingEventSkipsRaces(t *testing.T) {
 	}
 
 	qry := &mockQueryClient{
-		listEvents: func(
+		listRaces: func(
 			_ context.Context,
-			_ *connect.Request[queryv1.ListEventsRequest],
-		) (*connect.Response[queryv1.ListEventsResponse], error) {
-			e := &commonv1.Event{}
-			e.SetId(50)
-			e.SetName("Round 1 - Interlagos")
-			resp := &queryv1.ListEventsResponse{}
-			resp.SetItems([]*commonv1.Event{e})
+			_ *connect.Request[queryv1.ListRacesRequest],
+		) (*connect.Response[queryv1.ListRacesResponse], error) {
+			rc := &commonv1.Race{}
+			rc.SetId(51)
+			rc.SetName("Race 1")
+			resp := &queryv1.ListRacesResponse{}
+			resp.SetItems([]*commonv1.Race{rc})
 
 			return connect.NewResponse(resp), nil
 		},
@@ -951,10 +972,10 @@ func TestSetupRunner_ExistingEventSkipsRaces(t *testing.T) {
 	}
 
 	if raceCreateCalled {
-		t.Error("races must not be created when the parent event already existed")
+		t.Error("race must not be created when it already exists")
 	}
 
-	assertContains(t, buf.String(), `existing event "Round 1 - Interlagos"`)
+	assertContains(t, buf.String(), `existing race "Race 1"`)
 }
 
 // ---- runner: race create when event was newly provisioned ----
@@ -964,7 +985,7 @@ func TestSetupRunner_NewEventCreatesRaces(t *testing.T) {
 
 	var capturedRaceName string
 
-	var capturedSessionType string
+	var capturedSessionType commonv1.RaceSessionType
 
 	var capturedSequenceNo int32
 
@@ -1005,8 +1026,11 @@ func TestSetupRunner_NewEventCreatesRaces(t *testing.T) {
 		t.Errorf("expected race name %q, got %q", "Race 1", capturedRaceName)
 	}
 
-	if capturedSessionType != "race" {
-		t.Errorf("expected sessionType %q, got %q", "race", capturedSessionType)
+	if capturedSessionType != commonv1.RaceSessionType_RACE_SESSION_TYPE_RACE {
+		t.Errorf(
+			"expected sessionType %v, got %v",
+			commonv1.RaceSessionType_RACE_SESSION_TYPE_RACE, capturedSessionType,
+		)
 	}
 
 	if capturedSequenceNo != 1 {
@@ -1214,6 +1238,7 @@ func existingEntitiesQueryClient() *mockQueryClient {
 		modelID:  32,
 		driverID: 40,
 		eventID:  50,
+		raceID:   51,
 	})
 }
 
@@ -1224,6 +1249,7 @@ type fixtureIDs struct {
 	mfrID, brandID, modelID uint32
 	driverID                uint32
 	eventID                 uint32
+	raceID                  uint32
 }
 
 func buildExistingQueryClient(ids fixtureIDs) *mockQueryClient {
@@ -1239,6 +1265,7 @@ func buildExistingQueryClient(ids fixtureIDs) *mockQueryClient {
 	qry.listCarModels = buildExistingCarModels(ids)
 	qry.listDrivers = buildExistingDrivers(ids)
 	qry.listEvents = buildExistingEvents(ids)
+	qry.listRaces = buildExistingRaces(ids)
 
 	return qry
 }
@@ -1431,6 +1458,24 @@ func buildExistingEvents(ids fixtureIDs) func(
 		e.SetSeasonId(ids.snID)
 		resp := &queryv1.ListEventsResponse{}
 		resp.SetItems([]*commonv1.Event{e})
+
+		return connect.NewResponse(resp), nil
+	}
+}
+
+func buildExistingRaces(ids fixtureIDs) func(
+	context.Context, *connect.Request[queryv1.ListRacesRequest],
+) (*connect.Response[queryv1.ListRacesResponse], error) {
+	return func(
+		_ context.Context,
+		_ *connect.Request[queryv1.ListRacesRequest],
+	) (*connect.Response[queryv1.ListRacesResponse], error) {
+		rc := &commonv1.Race{}
+		rc.SetId(ids.raceID)
+		rc.SetName("Race 1")
+		rc.SetEventId(ids.eventID)
+		resp := &queryv1.ListRacesResponse{}
+		resp.SetItems([]*commonv1.Race{rc})
 
 		return connect.NewResponse(resp), nil
 	}

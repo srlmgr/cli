@@ -25,7 +25,7 @@ type PointSystemConfig struct {
 // DriverConfig defines a driver to be created.
 type DriverConfig struct {
 	Name       string `yaml:"name"`
-	ExternalID uint32 `yaml:"externalId"`
+	ExternalID string `yaml:"externalId"`
 	IsActive   bool   `yaml:"isActive"`
 }
 

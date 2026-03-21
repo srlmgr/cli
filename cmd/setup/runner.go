@@ -196,7 +196,7 @@ func (r *setupRunner) setupEventList(
 			return err
 		}
 
-		if err := r.setupRaceList(ctx, evID, events[i].Races, created); err != nil {
+		if err := r.setupRaceList(ctx, evID, events[i].Races); err != nil {
 			return fmt.Errorf("event %q races: %w", events[i].Name, err)
 		}
 	}
@@ -209,19 +209,14 @@ func (r *setupRunner) setupRaceList(
 	ctx context.Context,
 	eventID uint32,
 	races []RaceConfig,
-	eventCreated bool,
 ) error {
-	if !eventCreated {
-		return nil
-	}
-
 	for i := range races {
-		id, err := r.createRace(ctx, eventID, races[i])
+		id, created, err := r.ensureRace(ctx, eventID, races[i])
 		if err != nil {
 			return fmt.Errorf("race %q: %w", races[i].Name, err)
 		}
 
-		if err := r.printResult("race", races[i].Name, id, true); err != nil {
+		if err := r.printResult("race", races[i].Name, id, created); err != nil {
 			return err
 		}
 	}

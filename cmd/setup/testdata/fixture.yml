@@ -1,6 +1,6 @@
 drivers:
   - name: Max Verstappen
-    externalId: 830
+    externalId: "830"
     isActive: true
 
 pointSystems:
@@ -22,7 +22,7 @@ simulations:
                 processingState: pending
                 races:
                   - name: Race 1
-                    sessionType: race
+                    sessionType: RACE_SESSION_TYPE_RACE
                     sequenceNo: 1
 
 carManufacturers:
