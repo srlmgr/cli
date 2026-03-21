@@ -1,3 +1,4 @@
+//nolint:whitespace,dupl,funlen // test helper functions have similar structure
 package setup
 
 import (

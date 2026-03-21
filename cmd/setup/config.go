@@ -68,7 +68,6 @@ type LayoutConfig struct {
 
 // loadConfig reads, parses, and validates the YAML setup file.
 func loadConfig(filePath string) (*SetupConfig, error) {
-	//nolint:gosec // filePath is user-provided via --file flag; intentional
 	data, err := os.ReadFile(filePath)
 	if err != nil {
 		return nil, fmt.Errorf("read file: %w", err)
@@ -113,12 +112,12 @@ func validatePointSystems(items []PointSystemConfig) error {
 }
 
 func validateSimulations(items []SimulationConfig) error {
-	for i, sim := range items {
-		if sim.Name == "" {
+	for i := range items {
+		if items[i].Name == "" {
 			return fmt.Errorf("simulations[%d]: name is required", i)
 		}
 
-		if err := validateSeriesList(i, sim.Series); err != nil {
+		if err := validateSeriesList(i, items[i].Series); err != nil {
 			return err
 		}
 	}
@@ -127,15 +126,15 @@ func validateSimulations(items []SimulationConfig) error {
 }
 
 func validateSeriesList(simIdx int, series []SeriesConfig) error {
-	for j, sr := range series {
-		if sr.Name == "" {
+	for j := range series {
+		if series[j].Name == "" {
 			return fmt.Errorf(
 				"simulations[%d].series[%d]: name is required",
 				simIdx, j,
 			)
 		}
 
-		if err := validateSeasonList(simIdx, j, sr.Seasons); err != nil {
+		if err := validateSeasonList(simIdx, j, series[j].Seasons); err != nil {
 			return err
 		}
 	}
@@ -144,8 +143,8 @@ func validateSeriesList(simIdx int, series []SeriesConfig) error {
 }
 
 func validateSeasonList(simIdx, serIdx int, seasons []SeasonConfig) error {
-	for k, sn := range seasons {
-		if sn.Name == "" {
+	for k := range seasons {
+		if seasons[k].Name == "" {
 			return fmt.Errorf(
 				"simulations[%d].series[%d].seasons[%d]: name is required",
 				simIdx, serIdx, k,
@@ -157,12 +156,12 @@ func validateSeasonList(simIdx, serIdx int, seasons []SeasonConfig) error {
 }
 
 func validateManufacturers(items []CarManufacturerConfig) error {
-	for i, m := range items {
-		if m.Name == "" {
+	for i := range items {
+		if items[i].Name == "" {
 			return fmt.Errorf("carManufacturers[%d]: name is required", i)
 		}
 
-		if err := validateBrands(i, m.Brands); err != nil {
+		if err := validateBrands(i, items[i].Brands); err != nil {
 			return err
 		}
 	}
@@ -171,15 +170,15 @@ func validateManufacturers(items []CarManufacturerConfig) error {
 }
 
 func validateBrands(mfrIdx int, brands []BrandConfig) error {
-	for j, b := range brands {
-		if b.Name == "" {
+	for j := range brands {
+		if brands[j].Name == "" {
 			return fmt.Errorf(
 				"carManufacturers[%d].brands[%d]: name is required",
 				mfrIdx, j,
 			)
 		}
 
-		if err := validateModels(mfrIdx, j, b.Models); err != nil {
+		if err := validateModels(mfrIdx, j, brands[j].Models); err != nil {
 			return err
 		}
 	}
@@ -188,8 +187,8 @@ func validateBrands(mfrIdx int, brands []BrandConfig) error {
 }
 
 func validateModels(mfrIdx, brandIdx int, models []ModelConfig) error {
-	for k, m := range models {
-		if m.Name == "" {
+	for k := range models {
+		if models[k].Name == "" {
 			return fmt.Errorf(
 				"carManufacturers[%d].brands[%d].models[%d]: name is required",
 				mfrIdx, brandIdx, k,
@@ -201,13 +200,13 @@ func validateModels(mfrIdx, brandIdx int, models []ModelConfig) error {
 }
 
 func validateTracks(items []TrackConfig) error {
-	for i, t := range items {
-		if t.Name == "" {
+	for i := range items {
+		if items[i].Name == "" {
 			return fmt.Errorf("tracks[%d]: name is required", i)
 		}
 
-		for j, l := range t.Layouts {
-			if l.Name == "" {
+		for j := range items[i].Layouts {
+			if items[i].Layouts[j].Name == "" {
 				return fmt.Errorf(
 					"tracks[%d].layouts[%d]: name is required", i, j,
 				)

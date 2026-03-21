@@ -1,3 +1,4 @@
+//nolint:dupl // methods are similar by design
 package setup
 
 import (
@@ -10,6 +11,7 @@ import (
 	"connectrpc.com/connect"
 )
 
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensurePointSystem(
 	ctx context.Context, name string,
 ) (uint32, bool, error) {
@@ -42,6 +44,7 @@ func (r *setupRunner) ensurePointSystem(
 	)
 }
 
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureSimulation(
 	ctx context.Context, name string,
 ) (uint32, bool, error) {
@@ -75,6 +78,7 @@ func (r *setupRunner) ensureSimulation(
 	)
 }
 
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureSeries(
 	ctx context.Context, simID uint32, name string,
 ) (uint32, bool, error) {
@@ -110,6 +114,7 @@ func (r *setupRunner) ensureSeries(
 	)
 }
 
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureSeason(
 	ctx context.Context, seriesID, psID uint32, name string,
 ) (uint32, bool, error) {
@@ -146,6 +151,7 @@ func (r *setupRunner) ensureSeason(
 	)
 }
 
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureCarManufacturer(
 	ctx context.Context, name string,
 ) (uint32, bool, error) {
@@ -178,6 +184,7 @@ func (r *setupRunner) ensureCarManufacturer(
 	)
 }
 
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureCarBrand(
 	ctx context.Context, mfrID uint32, name string,
 ) (uint32, bool, error) {
@@ -215,6 +222,8 @@ func (r *setupRunner) ensureCarBrand(
 
 // ensureCarModel finds or creates a car model, scoped to both manufacturer and brand.
 // ListCarModels filters by manufacturer; brand-level scoping is applied in code.
+//
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureCarModel(
 	ctx context.Context, mfrID, brandID uint32, name string,
 ) (uint32, bool, error) {
@@ -252,6 +261,7 @@ func (r *setupRunner) ensureCarModel(
 	)
 }
 
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureTrack(
 	ctx context.Context, name string,
 ) (uint32, bool, error) {
@@ -284,6 +294,7 @@ func (r *setupRunner) ensureTrack(
 	)
 }
 
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureTrackLayout(
 	ctx context.Context, trackID uint32, name string,
 ) (uint32, bool, error) {

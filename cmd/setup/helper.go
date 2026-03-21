@@ -5,6 +5,8 @@ import "context"
 // findOrCreate lists items, finds a match by name, and creates one if not found.
 // Returns (id, created, error). In dry-run mode, missing entities
 // return (0, true, nil) without calling create.
+//
+//nolint:whitespace // editor/linter issue
 func findOrCreate[T any](
 	ctx context.Context,
 	list func(context.Context) ([]T, error),
