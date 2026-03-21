@@ -881,6 +881,10 @@ func TestSetupRunner_CreateEvent(t *testing.T) {
 
 	var capturedName string
 
+	var capturedStatus string
+
+	var capturedProcessingState string
+
 	cmd := &mockCommandClient{
 		createEvent: func(
 			_ context.Context,
@@ -889,6 +893,8 @@ func TestSetupRunner_CreateEvent(t *testing.T) {
 			capturedSeasonID = req.Msg.GetSeasonId()
 			capturedLayoutID = req.Msg.GetTrackLayoutId()
 			capturedName = req.Msg.GetName()
+			capturedStatus = req.Msg.GetStatus()
+			capturedProcessingState = req.Msg.GetProcessingState()
 
 			resp := &commandv1.CreateEventResponse{}
 			e := &commonv1.Event{}
@@ -926,7 +932,126 @@ func TestSetupRunner_CreateEvent(t *testing.T) {
 		t.Error("expected non-zero trackLayoutId on CreateEvent request")
 	}
 
+	if capturedStatus != commonv1.EventStatus_EVENT_STATUS_SCHEDULED.String() {
+		t.Errorf(
+			"expected status %q, got %q",
+			commonv1.EventStatus_EVENT_STATUS_SCHEDULED.String(),
+			capturedStatus,
+		)
+	}
+
+	wantProcessingState := commonv1.
+		EventProcessingState_EVENT_PROCESSING_STATE_DRAFT.String()
+	if capturedProcessingState != wantProcessingState {
+		t.Errorf(
+			"expected processingState %q, got %q",
+			wantProcessingState,
+			capturedProcessingState,
+		)
+	}
+
 	assertContains(t, buf.String(), `created event "Round 1 - Interlagos"`)
+}
+
+func TestSetupRunner_InvalidEventStatus(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("testdata/fixture.yml")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+
+	invalidFixture := strings.Replace(
+		string(data),
+		"status: EVENT_STATUS_SCHEDULED",
+		"status: INVALID_EVENT_STATUS",
+		1,
+	)
+
+	tmpFile, err := os.CreateTemp(t.TempDir(), "fixture.invalid-status-*.yml")
+	if err != nil {
+		t.Fatalf("create temp fixture: %v", err)
+	}
+
+	if _, writeErr := tmpFile.WriteString(invalidFixture); writeErr != nil {
+		tmpFile.Close()
+		t.Fatalf("write fixture: %v", writeErr)
+	}
+
+	if closeErr := tmpFile.Close(); closeErr != nil {
+		t.Fatalf("close fixture: %v", closeErr)
+	}
+
+	runner := &setupRunner{
+		filePath: tmpFile.Name(),
+		dryRun:   false,
+		out:      &bytes.Buffer{},
+		cmdSvc:   &mockCommandClient{},
+		qrySvc:   &mockQueryClient{},
+	}
+
+	err = runner.run(context.Background())
+	if err == nil {
+		t.Fatal("expected error for invalid event status, got nil")
+	}
+
+	assertContains(t, err.Error(), `unknown status "INVALID_EVENT_STATUS"`)
+	assertContains(t, err.Error(), "valid values")
+	assertContains(t, err.Error(), "EVENT_STATUS_SCHEDULED")
+}
+
+func TestSetupRunner_InvalidEventProcessingState(t *testing.T) {
+	t.Parallel()
+
+	data, err := os.ReadFile("testdata/fixture.yml")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+
+	invalidFixture := strings.Replace(
+		string(data),
+		"processingState: EVENT_PROCESSING_STATE_DRAFT",
+		"processingState: INVALID_EVENT_PROCESSING_STATE",
+		1,
+	)
+
+	tmpFile, err := os.CreateTemp(
+		t.TempDir(),
+		"fixture.invalid-processing-state-*.yml",
+	)
+	if err != nil {
+		t.Fatalf("create temp fixture: %v", err)
+	}
+
+	if _, writeErr := tmpFile.WriteString(invalidFixture); writeErr != nil {
+		tmpFile.Close()
+		t.Fatalf("write fixture: %v", writeErr)
+	}
+
+	if closeErr := tmpFile.Close(); closeErr != nil {
+		t.Fatalf("close fixture: %v", closeErr)
+	}
+
+	runner := &setupRunner{
+		filePath: tmpFile.Name(),
+		dryRun:   false,
+		out:      &bytes.Buffer{},
+		cmdSvc:   &mockCommandClient{},
+		qrySvc:   &mockQueryClient{},
+	}
+
+	err = runner.run(context.Background())
+	if err == nil {
+		t.Fatal("expected error for invalid event processingState, got nil")
+	}
+
+	assertContains(
+		t,
+		err.Error(),
+		`unknown processingState "INVALID_EVENT_PROCESSING_STATE"`,
+	)
+	assertContains(t, err.Error(), "valid values")
+	assertContains(t, err.Error(), "EVENT_PROCESSING_STATE_DRAFT")
 }
 
 func TestSetupRunner_ExistingEventSkipsRaces(t *testing.T) {

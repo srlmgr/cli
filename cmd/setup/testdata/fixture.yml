@@ -18,8 +18,8 @@ simulations:
               - name: Round 1 - Interlagos
                 trackLayout: Grand Prix
                 date: "2026-03-01"
-                status: upcoming
-                processingState: pending
+                status: EVENT_STATUS_SCHEDULED
+                processingState: EVENT_PROCESSING_STATE_DRAFT
                 races:
                   - name: Race 1
                     sessionType: RACE_SESSION_TYPE_RACE

@@ -4,6 +4,7 @@ package setup
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	commandv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/command/v1"
@@ -391,21 +392,31 @@ func (r *setupRunner) ensureEvent(
 		func(e *commonv1.Event) bool { return e.GetName() == cfg.Name },
 		func(e *commonv1.Event) uint32 { return e.GetId() },
 		func(ctx context.Context) (uint32, error) {
+			status, err := parseEventStatus(cfg.Status.String())
+			if err != nil {
+				return 0, err
+			}
+
+			processingState, err := parseEventProcessingState(cfg.ProcessingState.String())
+			if err != nil {
+				return 0, err
+			}
+
 			req := &commandv1.CreateEventRequest{
 				SeasonId:        seasonID,
 				TrackLayoutId:   trackLayoutID,
 				Name:            cfg.Name,
-				Status:          cfg.Status,
-				ProcessingState: cfg.ProcessingState,
+				Status:          status.String(),
+				ProcessingState: processingState.String(),
 			}
 
 			if cfg.Date != "" {
-				t, err := time.Parse(time.DateOnly, cfg.Date)
-				if err != nil {
-					return 0, fmt.Errorf("parse event date %q: %w", cfg.Date, err)
+				eventDate, parseErr := time.Parse(time.DateOnly, cfg.Date)
+				if parseErr != nil {
+					return 0, fmt.Errorf("parse event date %q: %w", cfg.Date, parseErr)
 				}
 
-				req.SetEventDate(timestamppb.New(t))
+				req.SetEventDate(timestamppb.New(eventDate))
 			}
 
 			resp, err := r.cmdSvc.CreateEvent(ctx, connect.NewRequest(req))
@@ -465,12 +476,62 @@ func (r *setupRunner) ensureRace(
 	)
 }
 
+func parseEventStatus(raw string) (commonv1.EventStatus, error) {
+	enumVal, ok := commonv1.EventStatus_value[raw]
+	if !ok {
+		return commonv1.EventStatus_EVENT_STATUS_UNSPECIFIED, fmt.Errorf(
+			"unknown status %q; valid values: %v",
+			raw,
+			validEventStatuses(),
+		)
+	}
+
+	return commonv1.EventStatus(enumVal), nil
+}
+
+func parseEventProcessingState(raw string) (commonv1.EventProcessingState, error) {
+	enumVal, ok := commonv1.EventProcessingState_value[raw]
+	if !ok {
+		return commonv1.EventProcessingState_EVENT_PROCESSING_STATE_UNSPECIFIED, fmt.Errorf(
+			"unknown processingState %q; valid values: %v",
+			raw,
+			validEventProcessingStates(),
+		)
+	}
+
+	return commonv1.EventProcessingState(enumVal), nil
+}
+
+func validEventStatuses() []string {
+	names := make([]string, 0, len(commonv1.EventStatus_value))
+	for name := range commonv1.EventStatus_value {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	return names
+}
+
+func validEventProcessingStates() []string {
+	names := make([]string, 0, len(commonv1.EventProcessingState_value))
+	for name := range commonv1.EventProcessingState_value {
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+
+	return names
+}
+
 // validRaceSessionTypes returns the list of valid session type enum names.
 func validRaceSessionTypes() []string {
 	names := make([]string, 0, len(commonv1.RaceSessionType_value))
 	for name := range commonv1.RaceSessionType_value {
 		names = append(names, name)
 	}
+
+	sort.Strings(names)
 
 	return names
 }
