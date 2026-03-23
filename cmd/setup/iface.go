@@ -70,6 +70,21 @@ type commandClient interface {
 		context.Context,
 		*connect.Request[commandv1.CreateRaceRequest],
 	) (*connect.Response[commandv1.CreateRaceResponse], error)
+
+	SetSimulationDriverAliases(
+		context.Context,
+		*connect.Request[commandv1.SetSimulationDriverAliasesRequest],
+	) (*connect.Response[commandv1.SetSimulationDriverAliasesResponse], error)
+
+	SetSimulationCarAliases(
+		context.Context,
+		*connect.Request[commandv1.SetSimulationCarAliasesRequest],
+	) (*connect.Response[commandv1.SetSimulationCarAliasesResponse], error)
+
+	SetSimulationTrackLayoutAliases(
+		context.Context,
+		*connect.Request[commandv1.SetSimulationTrackLayoutAliasesRequest],
+	) (*connect.Response[commandv1.SetSimulationTrackLayoutAliasesResponse], error)
 }
 
 // queryClient is the subset of QueryServiceClient used by the setup runner.

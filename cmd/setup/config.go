@@ -23,11 +23,19 @@ type PointSystemConfig struct {
 	Name string `yaml:"name"`
 }
 
+// EntitySimulationConfig holds a simulation reference
+// with optional aliases for a specific entity.
+type EntitySimulationConfig struct {
+	Name    string   `yaml:"name"`
+	Aliases []string `yaml:"aliases"`
+}
+
 // DriverConfig defines a driver to be created.
 type DriverConfig struct {
-	Name       string `yaml:"name"`
-	ExternalID string `yaml:"externalId"`
-	IsActive   bool   `yaml:"isActive"`
+	Name        string                   `yaml:"name"`
+	ExternalID  string                   `yaml:"externalId"`
+	IsActive    bool                     `yaml:"isActive"`
+	Simulations []EntitySimulationConfig `yaml:"simulations"`
 }
 
 // SimulationConfig defines a simulation and its child series.
@@ -104,7 +112,8 @@ type BrandConfig struct {
 
 // ModelConfig defines a car model.
 type ModelConfig struct {
-	Name string `yaml:"name"`
+	Name        string                   `yaml:"name"`
+	Simulations []EntitySimulationConfig `yaml:"simulations"`
 }
 
 // TrackConfig defines a track and its child layouts.
@@ -115,7 +124,8 @@ type TrackConfig struct {
 
 // LayoutConfig defines a track layout.
 type LayoutConfig struct {
-	Name string `yaml:"name"`
+	Name        string                   `yaml:"name"`
+	Simulations []EntitySimulationConfig `yaml:"simulations"`
 }
 
 // loadConfig reads, parses, and validates the YAML setup file.
@@ -226,6 +236,7 @@ func validateSeasonList(simIdx, serIdx int, seasons []SeasonConfig) error {
 	return nil
 }
 
+//nolint:lll // readability
 func validateEvents(simIdx, serIdx, snIdx int, events []EventConfig) error {
 	for i := range events {
 		if events[i].Name == "" {

@@ -2,6 +2,10 @@ drivers:
   - name: Max Verstappen
     externalId: "830"
     isActive: true
+    simulations:
+      - name: iRacing
+        aliases:
+          - "Max Verstappen iRacing"
 
 pointSystems:
   - name: Standard
@@ -31,8 +35,16 @@ carManufacturers:
       - name: Porsche 911
         models:
           - name: Porsche 911 GT3 Cup (992)
+            simulations:
+              - name: iRacing
+                aliases:
+                  - "Porsche 992 GT3 Cup"
 
 tracks:
   - name: Interlagos
     layouts:
       - name: Grand Prix
+        simulations:
+          - name: iRacing
+            aliases:
+              - "Interlagos GP"

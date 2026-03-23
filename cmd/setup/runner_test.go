@@ -1,4 +1,4 @@
-//nolint:whitespace,dupl,funlen // test helper functions have similar structure
+//nolint:whitespace,dupl,funlen,lll // test helper functions have similar structure
 package setup
 
 import (
@@ -12,6 +12,7 @@ import (
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
 	"connectrpc.com/connect"
+	"gopkg.in/yaml.v3"
 )
 
 // ---- mock implementations ----
@@ -76,6 +77,21 @@ type mockCommandClient struct {
 		context.Context,
 		*connect.Request[commandv1.CreateRaceRequest],
 	) (*connect.Response[commandv1.CreateRaceResponse], error)
+
+	setSimulationDriverAliases func(
+		context.Context,
+		*connect.Request[commandv1.SetSimulationDriverAliasesRequest],
+	) (*connect.Response[commandv1.SetSimulationDriverAliasesResponse], error)
+
+	setSimulationCarAliases func(
+		context.Context,
+		*connect.Request[commandv1.SetSimulationCarAliasesRequest],
+	) (*connect.Response[commandv1.SetSimulationCarAliasesResponse], error)
+
+	setSimulationTrackLayoutAliases func(
+		context.Context,
+		*connect.Request[commandv1.SetSimulationTrackLayoutAliasesRequest],
+	) (*connect.Response[commandv1.SetSimulationTrackLayoutAliasesResponse], error)
 }
 
 func (m *mockCommandClient) CreateSimulation(
@@ -278,6 +294,48 @@ func (m *mockCommandClient) CreateRace(
 	rc.SetName(req.Msg.GetName())
 	rc.SetId(51)
 	resp.SetRace(rc)
+
+	return connect.NewResponse(resp), nil
+}
+
+func (m *mockCommandClient) SetSimulationDriverAliases(
+	ctx context.Context,
+	req *connect.Request[commandv1.SetSimulationDriverAliasesRequest],
+) (*connect.Response[commandv1.SetSimulationDriverAliasesResponse], error) {
+	if m.setSimulationDriverAliases != nil {
+		return m.setSimulationDriverAliases(ctx, req)
+	}
+
+	resp := &commandv1.SetSimulationDriverAliasesResponse{}
+	resp.SetUpdated(true)
+
+	return connect.NewResponse(resp), nil
+}
+
+func (m *mockCommandClient) SetSimulationCarAliases(
+	ctx context.Context,
+	req *connect.Request[commandv1.SetSimulationCarAliasesRequest],
+) (*connect.Response[commandv1.SetSimulationCarAliasesResponse], error) {
+	if m.setSimulationCarAliases != nil {
+		return m.setSimulationCarAliases(ctx, req)
+	}
+
+	resp := &commandv1.SetSimulationCarAliasesResponse{}
+	resp.SetUpdated(true)
+
+	return connect.NewResponse(resp), nil
+}
+
+func (m *mockCommandClient) SetSimulationTrackLayoutAliases(
+	ctx context.Context,
+	req *connect.Request[commandv1.SetSimulationTrackLayoutAliasesRequest],
+) (*connect.Response[commandv1.SetSimulationTrackLayoutAliasesResponse], error) {
+	if m.setSimulationTrackLayoutAliases != nil {
+		return m.setSimulationTrackLayoutAliases(ctx, req)
+	}
+
+	resp := &commandv1.SetSimulationTrackLayoutAliasesResponse{}
+	resp.SetUpdated(true)
 
 	return connect.NewResponse(resp), nil
 }
@@ -686,6 +744,13 @@ func TestSetupRunner_CreateEntities(t *testing.T) {
 	assertContains(t, out, `created car-model "Porsche 911 GT3 Cup (992)"`)
 	assertContains(t, out, `created track "Interlagos"`)
 	assertContains(t, out, `created track-layout "Grand Prix"`)
+	assertContains(t, out, `set driver "Max Verstappen" aliases for simulation "iRacing"`)
+	assertContains(
+		t,
+		out,
+		`set car-model "Porsche 911 GT3 Cup (992)" aliases for simulation "iRacing"`,
+	)
+	assertContains(t, out, `set track-layout "Grand Prix" aliases for simulation "iRacing"`)
 }
 
 // ---- runner: idempotency (all entities already exist) ----
@@ -720,6 +785,13 @@ func TestSetupRunner_ExistingEntities(t *testing.T) {
 	assertContains(t, out, `existing car-model "Porsche 911 GT3 Cup (992)"`)
 	assertContains(t, out, `existing track "Interlagos"`)
 	assertContains(t, out, `existing track-layout "Grand Prix"`)
+	assertContains(t, out, `set driver "Max Verstappen" aliases for simulation "iRacing"`)
+	assertContains(
+		t,
+		out,
+		`set car-model "Porsche 911 GT3 Cup (992)" aliases for simulation "iRacing"`,
+	)
+	assertContains(t, out, `set track-layout "Grand Prix" aliases for simulation "iRacing"`)
 }
 
 // ---- runner: dry-run mode ----
@@ -1329,10 +1401,10 @@ func TestSetupRunner_E2E_FixtureFile(t *testing.T) {
 		t.Fatalf("run returned error: %v", err)
 	}
 
-	// Verify all 12 entity types were provisioned.
+	// Verify all entity types were provisioned (12 entities + 3 alias sets).
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
-	if len(lines) != 12 {
-		t.Errorf("expected 12 output lines, got %d:\n%s", len(lines), buf.String())
+	if len(lines) != 15 {
+		t.Errorf("expected 15 output lines, got %d:\n%s", len(lines), buf.String())
 	}
 
 	// Running again with all entities existing must not create anything.
@@ -1616,4 +1688,377 @@ func assertContains(t *testing.T, s, substr string) {
 	if !strings.Contains(s, substr) {
 		t.Errorf("expected output to contain %q\ngot:\n%s", substr, s)
 	}
+}
+
+// ---- runner: alias processing ----
+
+func TestSetupRunner_DriverAliasesAreSent(t *testing.T) {
+	t.Parallel()
+
+	var capturedDriverID uint32
+
+	var capturedSimID uint32
+
+	var capturedAliases []string
+
+	cmd := &mockCommandClient{
+		setSimulationDriverAliases: func(
+			_ context.Context,
+			req *connect.Request[commandv1.SetSimulationDriverAliasesRequest],
+		) (*connect.Response[commandv1.SetSimulationDriverAliasesResponse], error) {
+			capturedDriverID = req.Msg.GetDriverId()
+			capturedSimID = req.Msg.GetSimulationId()
+			capturedAliases = req.Msg.GetSimulationDriverId()
+
+			resp := &commandv1.SetSimulationDriverAliasesResponse{}
+			resp.SetUpdated(true)
+
+			return connect.NewResponse(resp), nil
+		},
+	}
+
+	var buf bytes.Buffer
+
+	runner := &setupRunner{
+		filePath: "testdata/fixture.yml",
+		dryRun:   false,
+		out:      &buf,
+		cmdSvc:   cmd,
+		qrySvc:   &mockQueryClient{},
+	}
+
+	if err := runner.run(context.Background()); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+
+	if capturedDriverID == 0 {
+		t.Error("expected non-zero driverID in SetSimulationDriverAliases request")
+	}
+
+	if capturedSimID == 0 {
+		t.Error("expected non-zero simulationID in SetSimulationDriverAliases request")
+	}
+
+	if len(capturedAliases) != 1 || capturedAliases[0] != "Max Verstappen iRacing" {
+		t.Errorf(
+			"expected aliases [%q], got %v",
+			"Max Verstappen iRacing", capturedAliases,
+		)
+	}
+
+	assertContains(t, buf.String(), `set driver "Max Verstappen" aliases for simulation "iRacing"`)
+}
+
+func TestSetupRunner_CarModelAliasesAreSent(t *testing.T) {
+	t.Parallel()
+
+	var capturedModelID uint32
+
+	var capturedSimID uint32
+
+	var capturedAliases []string
+
+	cmd := &mockCommandClient{
+		setSimulationCarAliases: func(
+			_ context.Context,
+			req *connect.Request[commandv1.SetSimulationCarAliasesRequest],
+		) (*connect.Response[commandv1.SetSimulationCarAliasesResponse], error) {
+			capturedModelID = req.Msg.GetCarModelId()
+			capturedSimID = req.Msg.GetSimulationId()
+			capturedAliases = req.Msg.GetExternalName()
+
+			resp := &commandv1.SetSimulationCarAliasesResponse{}
+			resp.SetUpdated(true)
+
+			return connect.NewResponse(resp), nil
+		},
+	}
+
+	var buf bytes.Buffer
+
+	runner := &setupRunner{
+		filePath: "testdata/fixture.yml",
+		dryRun:   false,
+		out:      &buf,
+		cmdSvc:   cmd,
+		qrySvc:   &mockQueryClient{},
+	}
+
+	if err := runner.run(context.Background()); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+
+	if capturedModelID == 0 {
+		t.Error("expected non-zero carModelID in SetSimulationCarAliases request")
+	}
+
+	if capturedSimID == 0 {
+		t.Error("expected non-zero simulationID in SetSimulationCarAliases request")
+	}
+
+	if len(capturedAliases) != 1 || capturedAliases[0] != "Porsche 992 GT3 Cup" {
+		t.Errorf(
+			"expected aliases [%q], got %v",
+			"Porsche 992 GT3 Cup", capturedAliases,
+		)
+	}
+
+	assertContains(
+		t, buf.String(),
+		`set car-model "Porsche 911 GT3 Cup (992)" aliases for simulation "iRacing"`,
+	)
+}
+
+func TestSetupRunner_TrackLayoutAliasesAreSent(t *testing.T) {
+	t.Parallel()
+
+	var capturedLayoutID uint32
+
+	var capturedSimID uint32
+
+	var capturedAliases []string
+
+	cmd := &mockCommandClient{
+		setSimulationTrackLayoutAliases: func(
+			_ context.Context,
+			req *connect.Request[commandv1.SetSimulationTrackLayoutAliasesRequest],
+		) (*connect.Response[commandv1.SetSimulationTrackLayoutAliasesResponse], error) {
+			capturedLayoutID = req.Msg.GetTrackLayoutId()
+			capturedSimID = req.Msg.GetSimulationId()
+			capturedAliases = req.Msg.GetExternalName()
+
+			resp := &commandv1.SetSimulationTrackLayoutAliasesResponse{}
+			resp.SetUpdated(true)
+
+			return connect.NewResponse(resp), nil
+		},
+	}
+
+	var buf bytes.Buffer
+
+	runner := &setupRunner{
+		filePath: "testdata/fixture.yml",
+		dryRun:   false,
+		out:      &buf,
+		cmdSvc:   cmd,
+		qrySvc:   &mockQueryClient{},
+	}
+
+	if err := runner.run(context.Background()); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+
+	if capturedLayoutID == 0 {
+		t.Error("expected non-zero trackLayoutID in SetSimulationTrackLayoutAliases request")
+	}
+
+	if capturedSimID == 0 {
+		t.Error("expected non-zero simulationID in SetSimulationTrackLayoutAliases request")
+	}
+
+	if len(capturedAliases) != 1 || capturedAliases[0] != "Interlagos GP" {
+		t.Errorf(
+			"expected aliases [%q], got %v",
+			"Interlagos GP", capturedAliases,
+		)
+	}
+
+	assertContains(
+		t, buf.String(),
+		`set track-layout "Grand Prix" aliases for simulation "iRacing"`,
+	)
+}
+
+func TestSetupRunner_AliasesSkippedInDryRun(t *testing.T) {
+	t.Parallel()
+
+	aliasCalled := false
+	cmd := &mockCommandClient{
+		setSimulationDriverAliases: func(
+			_ context.Context,
+			_ *connect.Request[commandv1.SetSimulationDriverAliasesRequest],
+		) (*connect.Response[commandv1.SetSimulationDriverAliasesResponse], error) {
+			aliasCalled = true
+
+			return connect.NewResponse(&commandv1.SetSimulationDriverAliasesResponse{}), nil
+		},
+		setSimulationCarAliases: func(
+			_ context.Context,
+			_ *connect.Request[commandv1.SetSimulationCarAliasesRequest],
+		) (*connect.Response[commandv1.SetSimulationCarAliasesResponse], error) {
+			aliasCalled = true
+
+			return connect.NewResponse(&commandv1.SetSimulationCarAliasesResponse{}), nil
+		},
+		setSimulationTrackLayoutAliases: func(
+			_ context.Context,
+			_ *connect.Request[commandv1.SetSimulationTrackLayoutAliasesRequest],
+		) (*connect.Response[commandv1.SetSimulationTrackLayoutAliasesResponse], error) {
+			aliasCalled = true
+
+			return connect.NewResponse(&commandv1.SetSimulationTrackLayoutAliasesResponse{}), nil
+		},
+	}
+
+	var buf bytes.Buffer
+
+	runner := &setupRunner{
+		filePath: "testdata/fixture.yml",
+		dryRun:   true,
+		out:      &buf,
+		cmdSvc:   cmd,
+		qrySvc:   &mockQueryClient{},
+	}
+
+	if err := runner.run(context.Background()); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+
+	if aliasCalled {
+		t.Error("expected no alias API calls in dry-run mode, but at least one was made")
+	}
+
+	out := buf.String()
+	assertContains(
+		t,
+		out,
+		`dry-run: would set driver "Max Verstappen" aliases for simulation "iRacing"`,
+	)
+	assertContains(
+		t,
+		out,
+		`dry-run: would set car-model "Porsche 911 GT3 Cup (992)" aliases for simulation "iRacing"`,
+	)
+	assertContains(
+		t,
+		out,
+		`dry-run: would set track-layout "Grand Prix" aliases for simulation "iRacing"`,
+	)
+}
+
+func TestSetupRunner_AliasWithUnknownSimulationFails(t *testing.T) {
+	t.Parallel()
+
+	cfg := &SetupConfig{
+		Drivers: []DriverConfig{
+			{
+				Name:     "Test Driver",
+				IsActive: true,
+				Simulations: []EntitySimulationConfig{
+					{Name: "NonExistentSim", Aliases: []string{"alias1"}},
+				},
+			},
+		},
+		Simulations: []SimulationConfig{
+			{Name: "iRacing", IsActive: true},
+		},
+	}
+
+	f := t.TempDir() + "/cfg.yml"
+	if err := writeYAML(t, f, cfg); err != nil {
+		t.Fatalf("write yaml: %v", err)
+	}
+
+	runner := &setupRunner{
+		filePath: f,
+		dryRun:   false,
+		out:      &bytes.Buffer{},
+		cmdSvc:   &mockCommandClient{},
+		qrySvc:   &mockQueryClient{},
+	}
+
+	err := runner.run(context.Background())
+	if err == nil {
+		t.Fatal("expected error for unknown simulation in alias, got nil")
+	}
+
+	assertContains(t, err.Error(), "NonExistentSim")
+}
+
+func TestSetupRunner_AliasesSetAfterSimulationsEnsured(t *testing.T) {
+	t.Parallel()
+
+	var callOrder []string
+
+	cmd := &mockCommandClient{
+		createSimulation: func(
+			_ context.Context,
+			req *connect.Request[commandv1.CreateSimulationRequest],
+		) (*connect.Response[commandv1.CreateSimulationResponse], error) {
+			callOrder = append(callOrder, "createSimulation")
+
+			resp := &commandv1.CreateSimulationResponse{}
+			sim := &commonv1.Simulation{}
+			sim.SetId(1)
+			sim.SetName(req.Msg.GetName())
+			resp.SetSimulation(sim)
+
+			return connect.NewResponse(resp), nil
+		},
+		setSimulationDriverAliases: func(
+			_ context.Context,
+			_ *connect.Request[commandv1.SetSimulationDriverAliasesRequest],
+		) (*connect.Response[commandv1.SetSimulationDriverAliasesResponse], error) {
+			callOrder = append(callOrder, "setSimulationDriverAliases")
+
+			resp := &commandv1.SetSimulationDriverAliasesResponse{}
+			resp.SetUpdated(true)
+
+			return connect.NewResponse(resp), nil
+		},
+	}
+
+	var buf bytes.Buffer
+
+	runner := &setupRunner{
+		filePath: "testdata/fixture.yml",
+		dryRun:   false,
+		out:      &buf,
+		cmdSvc:   cmd,
+		qrySvc:   &mockQueryClient{},
+	}
+
+	if err := runner.run(context.Background()); err != nil {
+		t.Fatalf("run returned error: %v", err)
+	}
+
+	simIdx := -1
+	aliasIdx := -1
+
+	for i, call := range callOrder {
+		switch call {
+		case "createSimulation":
+			simIdx = i
+		case "setSimulationDriverAliases":
+			aliasIdx = i
+		}
+	}
+
+	if simIdx < 0 {
+		t.Fatal("createSimulation was not called")
+	}
+
+	if aliasIdx < 0 {
+		t.Fatal("setSimulationDriverAliases was not called")
+	}
+
+	if aliasIdx <= simIdx {
+		t.Errorf(
+			"setSimulationDriverAliases (index %d) must be called after createSimulation (index %d)",
+			aliasIdx,
+			simIdx,
+		)
+	}
+}
+
+// writeYAML marshals cfg to YAML and writes it to path.
+func writeYAML(t *testing.T, path string, cfg *SetupConfig) error {
+	t.Helper()
+
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile(path, data, 0o600)
 }
