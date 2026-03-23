@@ -1,3 +1,4 @@
+//nolint:lll,whitespace // test code
 package preview
 
 import (
@@ -7,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
+	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
 	"connectrpc.com/connect"
 )
@@ -79,6 +80,7 @@ func TestPreviewCommand_Success(t *testing.T) {
 	}
 }
 
+//nolint:funlen // test code
 func TestPreviewCommand_WithRows(t *testing.T) {
 	t.Parallel()
 
@@ -126,64 +128,6 @@ func TestPreviewCommand_WithRows(t *testing.T) {
 	}
 	if !strings.Contains(out, "source_value=driver_abc") {
 		t.Errorf("expected output to contain source_value=driver_abc, got: %s", out)
-	}
-}
-
-func TestPreviewCommand_ResolvesEventID(t *testing.T) {
-	t.Parallel()
-
-	var capturedEventID uint32
-
-	runner := &previewCommand{
-		raceID: 5,
-		out:    &bytes.Buffer{},
-		qrySvc: &mockQueryClient{
-			getRace: func(_ context.Context, req *connect.Request[queryv1.GetRaceRequest]) (*connect.Response[queryv1.GetRaceResponse], error) {
-				race := &commonv1.Race{}
-				race.SetId(req.Msg.GetId())
-				race.SetEventId(77)
-				resp := &queryv1.GetRaceResponse{}
-				resp.SetRace(race)
-				return connect.NewResponse(resp), nil
-			},
-		},
-		importSvc: &mockImportClient{
-			getPreprocessPreview: func(_ context.Context, req *connect.Request[importv1.GetPreprocessPreviewRequest]) (*connect.Response[importv1.GetPreprocessPreviewResponse], error) {
-				capturedEventID = req.Msg.GetEventId()
-				return connect.NewResponse(&importv1.GetPreprocessPreviewResponse{}), nil
-			},
-		},
-	}
-
-	if err := runner.run(context.Background()); err != nil {
-		t.Fatalf("run returned error: %v", err)
-	}
-
-	if capturedEventID != 77 {
-		t.Errorf("expected event_id=77, got %d", capturedEventID)
-	}
-}
-
-func TestPreviewCommand_GetRaceError(t *testing.T) {
-	t.Parallel()
-
-	runner := &previewCommand{
-		raceID: 1,
-		out:    &bytes.Buffer{},
-		qrySvc: &mockQueryClient{
-			getRace: func(_ context.Context, _ *connect.Request[queryv1.GetRaceRequest]) (*connect.Response[queryv1.GetRaceResponse], error) {
-				return nil, errors.New("race not found")
-			},
-		},
-		importSvc: &mockImportClient{},
-	}
-
-	err := runner.run(context.Background())
-	if err == nil {
-		t.Fatal("expected error, got nil")
-	}
-	if !strings.Contains(err.Error(), "get race") {
-		t.Errorf("expected error to mention 'get race', got: %v", err)
 	}
 }
 

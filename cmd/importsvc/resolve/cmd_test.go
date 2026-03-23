@@ -1,3 +1,4 @@
+//nolint:lll,whitespace // test code
 package resolve
 
 import (
@@ -26,7 +27,7 @@ func (m *mockImportClient) ResolveMappings(
 	}
 
 	resp := &importv1.ResolveMappingsResponse{}
-	resp.SetResolvedMappings(3)
+	resp.SetUnresolvedMappings(3)
 
 	return connect.NewResponse(resp), nil
 }
@@ -39,9 +40,9 @@ func TestResolveCommand_Success(t *testing.T) {
 	var buf bytes.Buffer
 
 	runner := &resolveCommand{
-		importBatchID: 7,
-		out:           &buf,
-		importSvc:     &mockImportClient{},
+		raceID:    7,
+		out:       &buf,
+		importSvc: &mockImportClient{},
 	}
 
 	if err := runner.run(context.Background()); err != nil {
@@ -49,24 +50,24 @@ func TestResolveCommand_Success(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, "resolved_mappings=3") {
-		t.Errorf("expected output to contain resolved_mappings=3, got: %s", out)
+	if !strings.Contains(out, "unresolved_mappings=3") {
+		t.Errorf("expected output to contain unresolved_mappings=3, got: %s", out)
 	}
 }
 
-func TestResolveCommand_PassesBatchID(t *testing.T) {
+func TestResolveCommand_PassesRaceID(t *testing.T) {
 	t.Parallel()
 
-	var capturedBatchID uint32
+	var capturedRaceID uint32
 
 	runner := &resolveCommand{
-		importBatchID: 42,
-		out:           &bytes.Buffer{},
+		raceID: 42,
+		out:    &bytes.Buffer{},
 		importSvc: &mockImportClient{
 			resolveMappings: func(_ context.Context, req *connect.Request[importv1.ResolveMappingsRequest]) (*connect.Response[importv1.ResolveMappingsResponse], error) {
-				capturedBatchID = req.Msg.GetImportBatchId()
+				capturedRaceID = req.Msg.GetRaceId()
 				resp := &importv1.ResolveMappingsResponse{}
-				resp.SetResolvedMappings(0)
+				resp.SetUnresolvedMappings(0)
 				return connect.NewResponse(resp), nil
 			},
 		},
@@ -76,8 +77,8 @@ func TestResolveCommand_PassesBatchID(t *testing.T) {
 		t.Fatalf("run returned error: %v", err)
 	}
 
-	if capturedBatchID != 42 {
-		t.Errorf("expected import_batch_id=42, got %d", capturedBatchID)
+	if capturedRaceID != 42 {
+		t.Errorf("expected race_id=42, got %d", capturedRaceID)
 	}
 }
 
@@ -85,8 +86,8 @@ func TestResolveCommand_ServiceError(t *testing.T) {
 	t.Parallel()
 
 	runner := &resolveCommand{
-		importBatchID: 1,
-		out:           &bytes.Buffer{},
+		raceID: 1,
+		out:    &bytes.Buffer{},
 		importSvc: &mockImportClient{
 			resolveMappings: func(_ context.Context, _ *connect.Request[importv1.ResolveMappingsRequest]) (*connect.Response[importv1.ResolveMappingsResponse], error) {
 				return nil, errors.New("service error")

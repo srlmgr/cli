@@ -9,14 +9,14 @@ import (
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	importclient "github.com/srlmgr/cli/cmd/importsvc/client"
 	"github.com/srlmgr/cli/cmd/config"
+	importclient "github.com/srlmgr/cli/cmd/importsvc/client"
 	"github.com/srlmgr/cli/log"
 )
 
 func NewCmd() *cobra.Command {
-	var importBatchID uint32
-
+	var raceID uint32
+	//nolint:lll // readability
 	cmd := &cobra.Command{
 		Use:   "resolve",
 		Short: "Resolve driver/car mappings for an import batch",
@@ -25,8 +25,8 @@ func NewCmd() *cobra.Command {
 			logger := log.GetFromContext(cmd.Context()).Named("rpc")
 
 			runner := &resolveCommand{
-				importBatchID: importBatchID,
-				out:           cmd.OutOrStdout(),
+				raceID: raceID,
+				out:    cmd.OutOrStdout(),
 				importSvc: importclient.NewImportServiceClient(
 					config.APIAddr, config.APIToken, logger,
 				),
@@ -35,29 +35,32 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Uint32Var(&importBatchID, "import-batch-id", 0, "ID of the import batch to resolve mappings for")
-	if err := cmd.MarkFlagRequired("import-batch-id"); err != nil {
-		panic(fmt.Sprintf("failed to mark 'import-batch-id' flag as required: %v", err))
+	cmd.Flags().Uint32Var(&raceID, "race-id", 0, "ID of the race to resolve mappings for")
+	if err := cmd.MarkFlagRequired("race-id"); err != nil {
+		panic(fmt.Sprintf("failed to mark 'race-id' flag as required: %v", err))
 	}
 
 	return cmd
 }
 
 type importClient interface {
-	ResolveMappings(context.Context, *connect.Request[importv1.ResolveMappingsRequest]) (*connect.Response[importv1.ResolveMappingsResponse], error)
+	ResolveMappings(
+		context.Context,
+		*connect.Request[importv1.ResolveMappingsRequest],
+	) (*connect.Response[importv1.ResolveMappingsResponse], error)
 }
 
 type resolveCommand struct {
-	importBatchID uint32
-	out           io.Writer
-	importSvc     importClient
+	raceID    uint32
+	out       io.Writer
+	importSvc importClient
 }
 
 func (c *resolveCommand) run(ctx context.Context) error {
 	resp, err := c.importSvc.ResolveMappings(
 		ctx,
 		connect.NewRequest(&importv1.ResolveMappingsRequest{
-			ImportBatchId: c.importBatchID,
+			RaceId: c.raceID,
 		}),
 	)
 	if err != nil {
@@ -66,8 +69,8 @@ func (c *resolveCommand) run(ctx context.Context) error {
 
 	if _, err = fmt.Fprintf(
 		c.out,
-		"Resolved mappings: resolved_mappings=%d\n",
-		resp.Msg.GetResolvedMappings(),
+		"Resolved mappings: unresolved_mappings=%d\n",
+		resp.Msg.GetUnresolvedMappings(),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)
 	}

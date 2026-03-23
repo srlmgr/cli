@@ -11,13 +11,14 @@ import (
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	importclient "github.com/srlmgr/cli/cmd/importsvc/client"
 	"github.com/srlmgr/cli/cmd/config"
+	importclient "github.com/srlmgr/cli/cmd/importsvc/client"
 	queryclient "github.com/srlmgr/cli/cmd/query/client"
 	"github.com/srlmgr/cli/conversion"
 	"github.com/srlmgr/cli/log"
 )
 
+//nolint:lll,funlen // readability
 func NewCmd() *cobra.Command {
 	var raceID uint32
 	var importFormat string
@@ -56,7 +57,8 @@ func NewCmd() *cobra.Command {
 		panic(fmt.Sprintf("failed to mark 'race-id' flag as required: %v", err))
 	}
 
-	cmd.Flags().StringVar(&importFormat, "import-format", "", "Import format of the file (e.g. json, csv)")
+	cmd.Flags().
+		StringVar(&importFormat, "import-format", "", "Import format of the file (e.g. json, csv)")
 	if err := cmd.MarkFlagRequired("import-format"); err != nil {
 		panic(fmt.Sprintf("failed to mark 'import-format' flag as required: %v", err))
 	}
@@ -70,11 +72,17 @@ func NewCmd() *cobra.Command {
 }
 
 type queryClient interface {
-	GetRace(context.Context, *connect.Request[queryv1.GetRaceRequest]) (*connect.Response[queryv1.GetRaceResponse], error)
+	GetRace(
+		context.Context,
+		*connect.Request[queryv1.GetRaceRequest],
+	) (*connect.Response[queryv1.GetRaceResponse], error)
 }
 
 type importClient interface {
-	UploadResultsFile(context.Context, *connect.Request[importv1.UploadResultsFileRequest]) (*connect.Response[importv1.UploadResultsFileResponse], error)
+	UploadResultsFile(
+		context.Context,
+		*connect.Request[importv1.UploadResultsFileRequest],
+	) (*connect.Response[importv1.UploadResultsFileResponse], error)
 }
 
 type uploadCommand struct {
@@ -87,16 +95,6 @@ type uploadCommand struct {
 }
 
 func (c *uploadCommand) run(ctx context.Context) error {
-	raceResp, err := c.qrySvc.GetRace(
-		ctx,
-		connect.NewRequest(&queryv1.GetRaceRequest{Id: c.raceID}),
-	)
-	if err != nil {
-		return fmt.Errorf("get race: %w", err)
-	}
-
-	eventID := raceResp.Msg.GetRace().GetEventId()
-
 	format, err := conversion.ParseImportFormat(c.importFormat)
 	if err != nil {
 		return fmt.Errorf("parse import format: %w", err)
@@ -105,7 +103,6 @@ func (c *uploadCommand) run(ctx context.Context) error {
 	resp, err := c.importSvc.UploadResultsFile(
 		ctx,
 		connect.NewRequest(&importv1.UploadResultsFileRequest{
-			EventId:      eventID,
 			RaceId:       c.raceID,
 			ImportFormat: format,
 			Payload:      c.payload,
@@ -117,8 +114,8 @@ func (c *uploadCommand) run(ctx context.Context) error {
 
 	if _, err = fmt.Fprintf(
 		c.out,
-		"Uploaded results file: import_batch_id=%d processing_state=%s\n",
-		resp.Msg.GetImportBatchId(),
+		"Uploaded results file: race_id=%d processing_state=%s\n",
+		resp.Msg.GetRaceId(),
 		resp.Msg.GetProcessingState(),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)

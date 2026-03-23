@@ -10,15 +10,15 @@ import (
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
-	importclient "github.com/srlmgr/cli/cmd/importsvc/client"
 	"github.com/srlmgr/cli/cmd/config"
+	importclient "github.com/srlmgr/cli/cmd/importsvc/client"
 	queryclient "github.com/srlmgr/cli/cmd/query/client"
 	"github.com/srlmgr/cli/log"
 )
 
 func NewCmd() *cobra.Command {
 	var raceID uint32
-
+	//nolint:lll // readability
 	cmd := &cobra.Command{
 		Use:   "preview",
 		Short: "Preview preprocessed results for a race",
@@ -49,11 +49,17 @@ func NewCmd() *cobra.Command {
 }
 
 type queryClient interface {
-	GetRace(context.Context, *connect.Request[queryv1.GetRaceRequest]) (*connect.Response[queryv1.GetRaceResponse], error)
+	GetRace(
+		context.Context,
+		*connect.Request[queryv1.GetRaceRequest],
+	) (*connect.Response[queryv1.GetRaceResponse], error)
 }
 
 type importClient interface {
-	GetPreprocessPreview(context.Context, *connect.Request[importv1.GetPreprocessPreviewRequest]) (*connect.Response[importv1.GetPreprocessPreviewResponse], error)
+	GetPreprocessPreview(
+		context.Context,
+		*connect.Request[importv1.GetPreprocessPreviewRequest],
+	) (*connect.Response[importv1.GetPreprocessPreviewResponse], error)
 }
 
 type previewCommand struct {
@@ -64,21 +70,10 @@ type previewCommand struct {
 }
 
 func (c *previewCommand) run(ctx context.Context) error {
-	raceResp, err := c.qrySvc.GetRace(
-		ctx,
-		connect.NewRequest(&queryv1.GetRaceRequest{Id: c.raceID}),
-	)
-	if err != nil {
-		return fmt.Errorf("get race: %w", err)
-	}
-
-	eventID := raceResp.Msg.GetRace().GetEventId()
-
 	resp, err := c.importSvc.GetPreprocessPreview(
 		ctx,
 		connect.NewRequest(&importv1.GetPreprocessPreviewRequest{
-			EventId: eventID,
-			RaceId:  c.raceID,
+			RaceId: c.raceID,
 		}),
 	)
 	if err != nil {
