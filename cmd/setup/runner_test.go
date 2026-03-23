@@ -881,9 +881,9 @@ func TestSetupRunner_CreateEvent(t *testing.T) {
 
 	var capturedName string
 
-	var capturedStatus string
+	var capturedStatus commonv1.EventStatus
 
-	var capturedProcessingState string
+	var capturedProcessingState commonv1.EventProcessingState
 
 	cmd := &mockCommandClient{
 		createEvent: func(
@@ -932,16 +932,16 @@ func TestSetupRunner_CreateEvent(t *testing.T) {
 		t.Error("expected non-zero trackLayoutId on CreateEvent request")
 	}
 
-	if capturedStatus != commonv1.EventStatus_EVENT_STATUS_SCHEDULED.String() {
+	if capturedStatus != commonv1.EventStatus_EVENT_STATUS_SCHEDULED {
 		t.Errorf(
 			"expected status %q, got %q",
-			commonv1.EventStatus_EVENT_STATUS_SCHEDULED.String(),
+			commonv1.EventStatus_EVENT_STATUS_SCHEDULED,
 			capturedStatus,
 		)
 	}
 
 	wantProcessingState := commonv1.
-		EventProcessingState_EVENT_PROCESSING_STATE_DRAFT.String()
+		EventProcessingState_EVENT_PROCESSING_STATE_DRAFT
 	if capturedProcessingState != wantProcessingState {
 		t.Errorf(
 			"expected processingState %q, got %q",

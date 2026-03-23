@@ -406,8 +406,8 @@ func (r *setupRunner) ensureEvent(
 				SeasonId:        seasonID,
 				TrackLayoutId:   trackLayoutID,
 				Name:            cfg.Name,
-				Status:          status.String(),
-				ProcessingState: processingState.String(),
+				Status:          status,
+				ProcessingState: processingState,
 			}
 
 			if cfg.Date != "" {
