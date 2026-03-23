@@ -1,3 +1,4 @@
+//nolint:dupl // may happen
 package setup
 
 import (
@@ -16,7 +17,7 @@ type setupRunner struct {
 
 // run loads the config and provisions all entities in the required order.
 //
-//nolint:govet // by design
+//nolint:lll // readability
 func (r *setupRunner) run(ctx context.Context) error {
 	cfg, err := loadConfig(r.filePath)
 	if err != nil {
@@ -277,7 +278,7 @@ func (r *setupRunner) setupCarManufacturers(
 	return modelIDs, nil
 }
 
-//nolint:whitespace // editor/linter issue
+//nolint:whitespace,lll // editor/linter issue
 func (r *setupRunner) setupBrandList(
 	ctx context.Context,
 	mfrID uint32,
@@ -414,7 +415,12 @@ func (r *setupRunner) setupDriverAliases(
 				)
 			}
 
-			if err := r.setSimulationDriverAliases(ctx, driverID, simID, simCfg.Aliases); err != nil {
+			if err := r.setSimulationDriverAliases(
+				ctx,
+				driverID,
+				simID,
+				simCfg.Aliases,
+			); err != nil {
 				return fmt.Errorf("driver %q simulation %q aliases: %w", d.Name, simCfg.Name, err)
 			}
 
@@ -427,7 +433,7 @@ func (r *setupRunner) setupDriverAliases(
 	return nil
 }
 
-//nolint:whitespace // editor/linter issue
+//nolint:whitespace,lll // editor/linter issue
 func (r *setupRunner) setupTrackLayoutAliases(
 	ctx context.Context,
 	tracks []TrackConfig,
@@ -448,11 +454,17 @@ func (r *setupRunner) setupTrackLayoutAliases(
 				if !ok {
 					return fmt.Errorf(
 						"track layout %q: simulation %q not found; ensure it is defined under simulations",
-						layout.Name, simCfg.Name,
+						layout.Name,
+						simCfg.Name,
 					)
 				}
 
-				if err := r.setSimulationTrackLayoutAliases(ctx, layoutID, simID, simCfg.Aliases); err != nil {
+				if err := r.setSimulationTrackLayoutAliases(
+					ctx,
+					layoutID,
+					simID,
+					simCfg.Aliases,
+				); err != nil {
 					return fmt.Errorf(
 						"track layout %q simulation %q aliases: %w",
 						layout.Name, simCfg.Name, err,
@@ -469,7 +481,7 @@ func (r *setupRunner) setupTrackLayoutAliases(
 	return nil
 }
 
-//nolint:whitespace // editor/linter issue
+//nolint:whitespace,funlen // editor/linter issue
 func (r *setupRunner) setupCarModelAliases(
 	ctx context.Context,
 	mfrs []CarManufacturerConfig,
@@ -491,11 +503,17 @@ func (r *setupRunner) setupCarModelAliases(
 					if !ok {
 						return fmt.Errorf(
 							"car model %q: simulation %q not found; ensure it is defined under simulations",
-							model.Name, simCfg.Name,
+							model.Name,
+							simCfg.Name,
 						)
 					}
 
-					if err := r.setSimulationCarAliases(ctx, modelID, simID, simCfg.Aliases); err != nil {
+					if err := r.setSimulationCarAliases(
+						ctx,
+						modelID,
+						simID,
+						simCfg.Aliases,
+					); err != nil {
 						return fmt.Errorf(
 							"car model %q simulation %q aliases: %w",
 							model.Name, simCfg.Name, err,
@@ -537,7 +555,6 @@ func (r *setupRunner) printResult(
 	return err
 }
 
-//nolint:whitespace // editor/linter issue
 func (r *setupRunner) printAliasResult(entityType, name, simName string) error {
 	if r.dryRun {
 		_, err := fmt.Fprintf(

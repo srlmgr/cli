@@ -1,4 +1,4 @@
-//nolint:whitespace,dupl,funlen // test helper functions have similar structure
+//nolint:whitespace,dupl,funlen,lll // test helper functions have similar structure
 package setup
 
 import (
@@ -745,7 +745,11 @@ func TestSetupRunner_CreateEntities(t *testing.T) {
 	assertContains(t, out, `created track "Interlagos"`)
 	assertContains(t, out, `created track-layout "Grand Prix"`)
 	assertContains(t, out, `set driver "Max Verstappen" aliases for simulation "iRacing"`)
-	assertContains(t, out, `set car-model "Porsche 911 GT3 Cup (992)" aliases for simulation "iRacing"`)
+	assertContains(
+		t,
+		out,
+		`set car-model "Porsche 911 GT3 Cup (992)" aliases for simulation "iRacing"`,
+	)
 	assertContains(t, out, `set track-layout "Grand Prix" aliases for simulation "iRacing"`)
 }
 
@@ -782,7 +786,11 @@ func TestSetupRunner_ExistingEntities(t *testing.T) {
 	assertContains(t, out, `existing track "Interlagos"`)
 	assertContains(t, out, `existing track-layout "Grand Prix"`)
 	assertContains(t, out, `set driver "Max Verstappen" aliases for simulation "iRacing"`)
-	assertContains(t, out, `set car-model "Porsche 911 GT3 Cup (992)" aliases for simulation "iRacing"`)
+	assertContains(
+		t,
+		out,
+		`set car-model "Porsche 911 GT3 Cup (992)" aliases for simulation "iRacing"`,
+	)
 	assertContains(t, out, `set track-layout "Grand Prix" aliases for simulation "iRacing"`)
 }
 
@@ -1911,9 +1919,21 @@ func TestSetupRunner_AliasesSkippedInDryRun(t *testing.T) {
 	}
 
 	out := buf.String()
-	assertContains(t, out, `dry-run: would set driver "Max Verstappen" aliases for simulation "iRacing"`)
-	assertContains(t, out, `dry-run: would set car-model "Porsche 911 GT3 Cup (992)" aliases for simulation "iRacing"`)
-	assertContains(t, out, `dry-run: would set track-layout "Grand Prix" aliases for simulation "iRacing"`)
+	assertContains(
+		t,
+		out,
+		`dry-run: would set driver "Max Verstappen" aliases for simulation "iRacing"`,
+	)
+	assertContains(
+		t,
+		out,
+		`dry-run: would set car-model "Porsche 911 GT3 Cup (992)" aliases for simulation "iRacing"`,
+	)
+	assertContains(
+		t,
+		out,
+		`dry-run: would set track-layout "Grand Prix" aliases for simulation "iRacing"`,
+	)
 }
 
 func TestSetupRunner_AliasWithUnknownSimulationFails(t *testing.T) {
@@ -2025,7 +2045,8 @@ func TestSetupRunner_AliasesSetAfterSimulationsEnsured(t *testing.T) {
 	if aliasIdx <= simIdx {
 		t.Errorf(
 			"setSimulationDriverAliases (index %d) must be called after createSimulation (index %d)",
-			aliasIdx, simIdx,
+			aliasIdx,
+			simIdx,
 		)
 	}
 }

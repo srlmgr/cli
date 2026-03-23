@@ -23,7 +23,8 @@ type PointSystemConfig struct {
 	Name string `yaml:"name"`
 }
 
-// EntitySimulationConfig holds a simulation reference with optional aliases for a specific entity.
+// EntitySimulationConfig holds a simulation reference
+// with optional aliases for a specific entity.
 type EntitySimulationConfig struct {
 	Name    string   `yaml:"name"`
 	Aliases []string `yaml:"aliases"`
@@ -235,6 +236,7 @@ func validateSeasonList(simIdx, serIdx int, seasons []SeasonConfig) error {
 	return nil
 }
 
+//nolint:lll // readability
 func validateEvents(simIdx, serIdx, snIdx int, events []EventConfig) error {
 	for i := range events {
 		if events[i].Name == "" {
