@@ -23,7 +23,8 @@ func (r *setupRunner) run(ctx context.Context) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	if err := r.setupDrivers(ctx, cfg.Drivers); err != nil {
+	driverIDs, err := r.setupDrivers(ctx, cfg.Drivers)
+	if err != nil {
 		return fmt.Errorf("setup drivers: %w", err)
 	}
 
@@ -37,12 +38,18 @@ func (r *setupRunner) run(ctx context.Context) error {
 		return fmt.Errorf("setup tracks: %w", err)
 	}
 
-	if err := r.setupSimulations(ctx, cfg.Simulations, psIDs, layoutIDs); err != nil {
+	simIDs, err := r.setupSimulations(ctx, cfg.Simulations, psIDs, layoutIDs)
+	if err != nil {
 		return fmt.Errorf("setup simulations: %w", err)
 	}
 
-	if err := r.setupCarManufacturers(ctx, cfg.CarManufacturers); err != nil {
+	modelIDs, err := r.setupCarManufacturers(ctx, cfg.CarManufacturers)
+	if err != nil {
 		return fmt.Errorf("setup car manufacturers: %w", err)
+	}
+
+	if err := r.setupAliases(ctx, cfg, simIDs, driverIDs, modelIDs, layoutIDs); err != nil {
+		return fmt.Errorf("setup aliases: %w", err)
 	}
 
 	return nil
@@ -52,20 +59,24 @@ func (r *setupRunner) run(ctx context.Context) error {
 func (r *setupRunner) setupDrivers(
 	ctx context.Context,
 	drivers []DriverConfig,
-) error {
+) (map[string]uint32, error) {
+	ids := make(map[string]uint32, len(drivers))
+
 	for i := range drivers {
 		d := drivers[i]
 		id, created, err := r.ensureDriver(ctx, d)
 		if err != nil {
-			return fmt.Errorf("driver %q: %w", d.Name, err)
+			return nil, fmt.Errorf("driver %q: %w", d.Name, err)
 		}
 
 		if err := r.printResult("driver", d.Name, id, created); err != nil {
-			return err
+			return nil, err
 		}
+
+		ids[d.Name] = id
 	}
 
-	return nil
+	return ids, nil
 }
 
 //nolint:whitespace // editor/linter issue
@@ -97,16 +108,20 @@ func (r *setupRunner) setupSimulations(
 	sims []SimulationConfig,
 	psIDs map[string]uint32,
 	layoutIDs map[string]uint32,
-) error {
+) (map[string]uint32, error) {
+	simIDs := make(map[string]uint32, len(sims))
+
 	for i := range sims {
 		simID, created, err := r.ensureSimulation(ctx, sims[i].Name, sims[i].IsActive)
 		if err != nil {
-			return fmt.Errorf("simulation %q: %w", sims[i].Name, err)
+			return nil, fmt.Errorf("simulation %q: %w", sims[i].Name, err)
 		}
 
 		if err := r.printResult("simulation", sims[i].Name, simID, created); err != nil {
-			return err
+			return nil, err
 		}
+
+		simIDs[sims[i].Name] = simID
 
 		if err := r.setupSeriesList(
 			ctx,
@@ -114,11 +129,11 @@ func (r *setupRunner) setupSimulations(
 			sims[i].Series,
 			psIDs,
 			layoutIDs); err != nil {
-			return fmt.Errorf("simulation %q series: %w", sims[i].Name, err)
+			return nil, fmt.Errorf("simulation %q series: %w", sims[i].Name, err)
 		}
 	}
 
-	return nil
+	return simIDs, nil
 }
 
 //nolint:whitespace // editor/linter issue
@@ -241,23 +256,25 @@ func (r *setupRunner) setupRaceList(
 func (r *setupRunner) setupCarManufacturers(
 	ctx context.Context,
 	mfrs []CarManufacturerConfig,
-) error {
+) (map[string]uint32, error) {
+	modelIDs := make(map[string]uint32)
+
 	for i := range mfrs {
 		mfrID, created, err := r.ensureCarManufacturer(ctx, mfrs[i].Name)
 		if err != nil {
-			return fmt.Errorf("car manufacturer %q: %w", mfrs[i].Name, err)
+			return nil, fmt.Errorf("car manufacturer %q: %w", mfrs[i].Name, err)
 		}
 		//nolint:lll // readability
 		if err := r.printResult("car-manufacturer", mfrs[i].Name, mfrID, created); err != nil {
-			return err
+			return nil, err
 		}
 
-		if err := r.setupBrandList(ctx, mfrID, mfrs[i].Brands); err != nil {
-			return fmt.Errorf("car manufacturer %q brands: %w", mfrs[i].Name, err)
+		if err := r.setupBrandList(ctx, mfrID, mfrs[i].Brands, modelIDs); err != nil {
+			return nil, fmt.Errorf("car manufacturer %q brands: %w", mfrs[i].Name, err)
 		}
 	}
 
-	return nil
+	return modelIDs, nil
 }
 
 //nolint:whitespace // editor/linter issue
@@ -265,6 +282,7 @@ func (r *setupRunner) setupBrandList(
 	ctx context.Context,
 	mfrID uint32,
 	brands []BrandConfig,
+	modelIDs map[string]uint32,
 ) error {
 	for i := range brands {
 		brandID, created, err := r.ensureCarBrand(ctx, mfrID, brands[i].Name)
@@ -276,7 +294,7 @@ func (r *setupRunner) setupBrandList(
 			return err
 		}
 
-		if err := r.setupModelList(ctx, mfrID, brandID, brands[i].Models); err != nil {
+		if err := r.setupModelList(ctx, mfrID, brandID, brands[i].Models, modelIDs); err != nil {
 			return fmt.Errorf("car brand %q models: %w", brands[i].Name, err)
 		}
 	}
@@ -289,6 +307,7 @@ func (r *setupRunner) setupModelList(
 	ctx context.Context,
 	mfrID, brandID uint32,
 	models []ModelConfig,
+	modelIDs map[string]uint32,
 ) error {
 	for i := range models {
 		modelID, created, err := r.ensureCarModel(ctx, mfrID, brandID, models[i].Name)
@@ -299,6 +318,8 @@ func (r *setupRunner) setupModelList(
 		if err := r.printResult("car-model", models[i].Name, modelID, created); err != nil {
 			return err
 		}
+
+		modelIDs[models[i].Name] = modelID
 	}
 
 	return nil
@@ -353,6 +374,146 @@ func (r *setupRunner) setupLayoutList(
 }
 
 //nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupAliases(
+	ctx context.Context,
+	cfg *SetupConfig,
+	simIDs, driverIDs, modelIDs, layoutIDs map[string]uint32,
+) error {
+	if err := r.setupDriverAliases(ctx, cfg.Drivers, simIDs, driverIDs); err != nil {
+		return err
+	}
+
+	if err := r.setupTrackLayoutAliases(ctx, cfg.Tracks, simIDs, layoutIDs); err != nil {
+		return err
+	}
+
+	return r.setupCarModelAliases(ctx, cfg.CarManufacturers, simIDs, modelIDs)
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupDriverAliases(
+	ctx context.Context,
+	drivers []DriverConfig,
+	simIDs, driverIDs map[string]uint32,
+) error {
+	for i := range drivers {
+		d := &drivers[i]
+		driverID := driverIDs[d.Name]
+
+		for j := range d.Simulations {
+			simCfg := &d.Simulations[j]
+			if len(simCfg.Aliases) == 0 {
+				continue
+			}
+
+			simID, ok := simIDs[simCfg.Name]
+			if !ok {
+				return fmt.Errorf(
+					"driver %q: simulation %q not found; ensure it is defined under simulations",
+					d.Name, simCfg.Name,
+				)
+			}
+
+			if err := r.setSimulationDriverAliases(ctx, driverID, simID, simCfg.Aliases); err != nil {
+				return fmt.Errorf("driver %q simulation %q aliases: %w", d.Name, simCfg.Name, err)
+			}
+
+			if err := r.printAliasResult("driver", d.Name, simCfg.Name); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupTrackLayoutAliases(
+	ctx context.Context,
+	tracks []TrackConfig,
+	simIDs, layoutIDs map[string]uint32,
+) error {
+	for i := range tracks {
+		for j := range tracks[i].Layouts {
+			layout := &tracks[i].Layouts[j]
+			layoutID := layoutIDs[layout.Name]
+
+			for k := range layout.Simulations {
+				simCfg := &layout.Simulations[k]
+				if len(simCfg.Aliases) == 0 {
+					continue
+				}
+
+				simID, ok := simIDs[simCfg.Name]
+				if !ok {
+					return fmt.Errorf(
+						"track layout %q: simulation %q not found; ensure it is defined under simulations",
+						layout.Name, simCfg.Name,
+					)
+				}
+
+				if err := r.setSimulationTrackLayoutAliases(ctx, layoutID, simID, simCfg.Aliases); err != nil {
+					return fmt.Errorf(
+						"track layout %q simulation %q aliases: %w",
+						layout.Name, simCfg.Name, err,
+					)
+				}
+
+				if err := r.printAliasResult("track-layout", layout.Name, simCfg.Name); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupCarModelAliases(
+	ctx context.Context,
+	mfrs []CarManufacturerConfig,
+	simIDs, modelIDs map[string]uint32,
+) error {
+	for i := range mfrs {
+		for j := range mfrs[i].Brands {
+			for k := range mfrs[i].Brands[j].Models {
+				model := &mfrs[i].Brands[j].Models[k]
+				modelID := modelIDs[model.Name]
+
+				for l := range model.Simulations {
+					simCfg := &model.Simulations[l]
+					if len(simCfg.Aliases) == 0 {
+						continue
+					}
+
+					simID, ok := simIDs[simCfg.Name]
+					if !ok {
+						return fmt.Errorf(
+							"car model %q: simulation %q not found; ensure it is defined under simulations",
+							model.Name, simCfg.Name,
+						)
+					}
+
+					if err := r.setSimulationCarAliases(ctx, modelID, simID, simCfg.Aliases); err != nil {
+						return fmt.Errorf(
+							"car model %q simulation %q aliases: %w",
+							model.Name, simCfg.Name, err,
+						)
+					}
+
+					if err := r.printAliasResult("car-model", model.Name, simCfg.Name); err != nil {
+						return err
+					}
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) printResult(
 	entityType, name string, id uint32, created bool,
 ) error {
@@ -371,6 +532,25 @@ func (r *setupRunner) printResult(
 
 	_, err := fmt.Fprintf(
 		r.out, "%s %s %q id=%d\n", status, entityType, name, id,
+	)
+
+	return err
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) printAliasResult(entityType, name, simName string) error {
+	if r.dryRun {
+		_, err := fmt.Fprintf(
+			r.out, "dry-run: would set %s %q aliases for simulation %q\n",
+			entityType, name, simName,
+		)
+
+		return err
+	}
+
+	_, err := fmt.Fprintf(
+		r.out, "set %s %q aliases for simulation %q\n",
+		entityType, name, simName,
 	)
 
 	return err

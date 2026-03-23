@@ -476,6 +476,72 @@ func (r *setupRunner) ensureRace(
 	)
 }
 
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setSimulationDriverAliases(
+	ctx context.Context, driverID, simID uint32, aliases []string,
+) error {
+	if r.dryRun {
+		return nil
+	}
+
+	_, err := r.cmdSvc.SetSimulationDriverAliases(ctx,
+		connect.NewRequest(&commandv1.SetSimulationDriverAliasesRequest{
+			DriverId:           driverID,
+			SimulationId:       simID,
+			SimulationDriverId: aliases,
+		}),
+	)
+	if err != nil {
+		return fmt.Errorf("set simulation driver aliases: %w", err)
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setSimulationCarAliases(
+	ctx context.Context, carModelID, simID uint32, aliases []string,
+) error {
+	if r.dryRun {
+		return nil
+	}
+
+	_, err := r.cmdSvc.SetSimulationCarAliases(ctx,
+		connect.NewRequest(&commandv1.SetSimulationCarAliasesRequest{
+			CarModelId:   carModelID,
+			SimulationId: simID,
+			ExternalName: aliases,
+		}),
+	)
+	if err != nil {
+		return fmt.Errorf("set simulation car aliases: %w", err)
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setSimulationTrackLayoutAliases(
+	ctx context.Context, layoutID, simID uint32, aliases []string,
+) error {
+	if r.dryRun {
+		return nil
+	}
+
+	_, err := r.cmdSvc.SetSimulationTrackLayoutAliases(ctx,
+		connect.NewRequest(&commandv1.SetSimulationTrackLayoutAliasesRequest{
+			TrackLayoutId: layoutID,
+			SimulationId:  simID,
+			ExternalName:  aliases,
+		}),
+	)
+	if err != nil {
+		return fmt.Errorf("set simulation track layout aliases: %w", err)
+	}
+
+	return nil
+}
+
 func parseEventStatus(raw string) (commonv1.EventStatus, error) {
 	enumVal, ok := commonv1.EventStatus_value[raw]
 	if !ok {
