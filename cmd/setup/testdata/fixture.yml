@@ -28,6 +28,23 @@ simulations:
                   - name: Race 1
                     sessionType: RACE_SESSION_TYPE_RACE
                     sequenceNo: 1
+                    grids:
+                      - name: Grid 1
+                        sessionType: RACE_SESSION_TYPE_RACE
+                        sequenceNo: 1
+                      - name: Grid 2
+                        sessionType: RACE_SESSION_TYPE_RACE
+                        sequenceNo: 2
+                  - name: Race 2
+                    sessionType: RACE_SESSION_TYPE_RACE
+                    sequenceNo: 2
+                    grids:
+                      - name: Grid 1
+                        sessionType: RACE_SESSION_TYPE_RACE
+                        sequenceNo: 1
+                      - name: Grid 2
+                        sessionType: RACE_SESSION_TYPE_RACE
+                        sequenceNo: 2
 
 carManufacturers:
   - name: Porsche

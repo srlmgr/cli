@@ -71,6 +71,11 @@ type commandClient interface {
 		*connect.Request[commandv1.CreateRaceRequest],
 	) (*connect.Response[commandv1.CreateRaceResponse], error)
 
+	CreateRaceGrid(
+		context.Context,
+		*connect.Request[commandv1.CreateRaceGridRequest],
+	) (*connect.Response[commandv1.CreateRaceGridResponse], error)
+
 	SetSimulationDriverAliases(
 		context.Context,
 		*connect.Request[commandv1.SetSimulationDriverAliasesRequest],
@@ -148,4 +153,9 @@ type queryClient interface {
 		context.Context,
 		*connect.Request[queryv1.ListRacesRequest],
 	) (*connect.Response[queryv1.ListRacesResponse], error)
+
+	ListRaceGrids(
+		context.Context,
+		*connect.Request[queryv1.ListRaceGridsRequest],
+	) (*connect.Response[queryv1.ListRaceGridsResponse], error)
 }

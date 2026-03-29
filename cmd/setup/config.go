@@ -93,6 +93,14 @@ func (s EventProcessingStateConfig) String() string {
 
 // RaceConfig defines a race under an event.
 type RaceConfig struct {
+	Name        string           `yaml:"name"`
+	SessionType string           `yaml:"sessionType"`
+	SequenceNo  int32            `yaml:"sequenceNo"`
+	Grids       []RaceGridConfig `yaml:"grids"`
+}
+
+// RaceGridConfig defines a race grid under a race.
+type RaceGridConfig struct {
 	Name        string `yaml:"name"`
 	SessionType string `yaml:"sessionType"`
 	SequenceNo  int32  `yaml:"sequenceNo"`
@@ -274,6 +282,40 @@ func validateRaces(simIdx, serIdx, snIdx, evIdx int, races []RaceConfig) error {
 			return fmt.Errorf(
 				"simulations[%d].series[%d].seasons[%d].events[%d].races[%d]: name is required",
 				simIdx, serIdx, snIdx, evIdx, i,
+			)
+		}
+
+		if err := validateRaceGrids(
+			simIdx,
+			serIdx,
+			snIdx,
+			evIdx,
+			i,
+			races[i].Grids,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func validateRaceGrids(
+	simIdx, serIdx, snIdx, evIdx, raceIdx int,
+	grids []RaceGridConfig,
+) error {
+	for i := range grids {
+		if grids[i].Name == "" {
+			return fmt.Errorf(
+				"simulations[%d].series[%d].seasons[%d].events[%d].races[%d]."+
+					"grids[%d]: name is required",
+				simIdx,
+				serIdx,
+				snIdx,
+				evIdx,
+				raceIdx,
+				i,
 			)
 		}
 	}

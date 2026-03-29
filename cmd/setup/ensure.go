@@ -477,6 +477,52 @@ func (r *setupRunner) ensureRace(
 }
 
 //nolint:whitespace // editor/linter issue
+func (r *setupRunner) ensureRaceGrid(
+	ctx context.Context, raceID uint32, cfg RaceGridConfig,
+) (uint32, bool, error) {
+	return findOrCreate(ctx,
+		func(ctx context.Context) ([]*commonv1.RaceGrid, error) {
+			resp, err := r.qrySvc.ListRaceGrids(ctx,
+				connect.NewRequest(&queryv1.ListRaceGridsRequest{
+					RaceId: raceID,
+				}),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("list race grids: %w", err)
+			}
+
+			return resp.Msg.GetItems(), nil
+		},
+		func(rg *commonv1.RaceGrid) bool { return rg.GetName() == cfg.Name },
+		func(rg *commonv1.RaceGrid) uint32 { return rg.GetId() },
+		func(ctx context.Context) (uint32, error) {
+			enumVal, ok := commonv1.RaceSessionType_value[cfg.SessionType]
+			if !ok {
+				return 0, fmt.Errorf(
+					"unknown sessionType %q; valid values: %v",
+					cfg.SessionType, validRaceSessionTypes(),
+				)
+			}
+
+			resp, err := r.cmdSvc.CreateRaceGrid(ctx,
+				connect.NewRequest(&commandv1.CreateRaceGridRequest{
+					RaceId:      raceID,
+					Name:        cfg.Name,
+					SessionType: commonv1.RaceSessionType(enumVal),
+					SequenceNo:  cfg.SequenceNo,
+				}),
+			)
+			if err != nil {
+				return 0, fmt.Errorf("create race grid: %w", err)
+			}
+
+			return resp.Msg.GetRaceGrid().GetId(), nil
+		},
+		r.dryRun,
+	)
+}
+
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) setSimulationDriverAliases(
 	ctx context.Context, driverID, simID uint32, aliases []string,
 ) error {

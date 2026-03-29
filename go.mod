@@ -3,8 +3,8 @@ module github.com/srlmgr/cli
 go 1.26
 
 require (
-	buf.build/gen/go/srlmgr/api/connectrpc/go v1.19.1-20260323143845-abbe45bbd4ff.2
-	buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260323143845-abbe45bbd4ff.1
+	buf.build/gen/go/srlmgr/api/connectrpc/go v1.19.1-20260329080420-41552133acf2.2
+	buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260329080420-41552133acf2.1
 	connectrpc.com/connect v1.19.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
