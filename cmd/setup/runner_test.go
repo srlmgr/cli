@@ -78,6 +78,11 @@ type mockCommandClient struct {
 		*connect.Request[commandv1.CreateRaceRequest],
 	) (*connect.Response[commandv1.CreateRaceResponse], error)
 
+	createRaceGrid func(
+		context.Context,
+		*connect.Request[commandv1.CreateRaceGridRequest],
+	) (*connect.Response[commandv1.CreateRaceGridResponse], error)
+
 	setSimulationDriverAliases func(
 		context.Context,
 		*connect.Request[commandv1.SetSimulationDriverAliasesRequest],
@@ -298,6 +303,23 @@ func (m *mockCommandClient) CreateRace(
 	return connect.NewResponse(resp), nil
 }
 
+func (m *mockCommandClient) CreateRaceGrid(
+	ctx context.Context,
+	req *connect.Request[commandv1.CreateRaceGridRequest],
+) (*connect.Response[commandv1.CreateRaceGridResponse], error) {
+	if m.createRaceGrid != nil {
+		return m.createRaceGrid(ctx, req)
+	}
+
+	resp := &commandv1.CreateRaceGridResponse{}
+	rg := &commonv1.RaceGrid{}
+	rg.SetName(req.Msg.GetName())
+	rg.SetId(52)
+	resp.SetRaceGrid(rg)
+
+	return connect.NewResponse(resp), nil
+}
+
 func (m *mockCommandClient) SetSimulationDriverAliases(
 	ctx context.Context,
 	req *connect.Request[commandv1.SetSimulationDriverAliasesRequest],
@@ -401,6 +423,11 @@ type mockQueryClient struct {
 		context.Context,
 		*connect.Request[queryv1.ListRacesRequest],
 	) (*connect.Response[queryv1.ListRacesResponse], error)
+
+	listRaceGrids func(
+		context.Context,
+		*connect.Request[queryv1.ListRaceGridsRequest],
+	) (*connect.Response[queryv1.ListRaceGridsResponse], error)
 }
 
 func (m *mockQueryClient) ListSimulations(
@@ -535,6 +562,17 @@ func (m *mockQueryClient) ListRaces(
 	return connect.NewResponse(&queryv1.ListRacesResponse{}), nil
 }
 
+func (m *mockQueryClient) ListRaceGrids(
+	ctx context.Context,
+	req *connect.Request[queryv1.ListRaceGridsRequest],
+) (*connect.Response[queryv1.ListRaceGridsResponse], error) {
+	if m.listRaceGrids != nil {
+		return m.listRaceGrids(ctx, req)
+	}
+
+	return connect.NewResponse(&queryv1.ListRaceGridsResponse{}), nil
+}
+
 // ---- YAML parsing tests ----
 //
 //nolint:gocyclo // test function with multiple assertions
@@ -600,13 +638,21 @@ func TestLoadConfig_ValidYAML(t *testing.T) {
 	}
 
 	races := events[0].Races
-	if len(races) != 1 || races[0].Name != "Race 1" {
+	if len(races) != 2 || races[0].Name != "Race 1" || races[1].Name != "Race 2" {
 		t.Errorf("unexpected races: %+v", races)
 	}
 
 	if races[0].SessionType != "RACE_SESSION_TYPE_RACE" {
 		t.Errorf("expected sessionType %q, got %q",
 			"RACE_SESSION_TYPE_RACE", races[0].SessionType)
+	}
+
+	if len(races[0].Grids) != 2 {
+		t.Fatalf("expected 2 grids in first race, got %d", len(races[0].Grids))
+	}
+
+	if races[0].Grids[0].Name != "Grid 1" || races[0].Grids[1].Name != "Grid 2" {
+		t.Errorf("unexpected first-race grids: %+v", races[0].Grids)
 	}
 
 	if len(cfg.Tracks) != 1 || cfg.Tracks[0].Name != "Interlagos" {
@@ -739,6 +785,9 @@ func TestSetupRunner_CreateEntities(t *testing.T) {
 	assertContains(t, out, `created season "Saison XVIII"`)
 	assertContains(t, out, `created event "Round 1 - Interlagos"`)
 	assertContains(t, out, `created race "Race 1"`)
+	assertContains(t, out, `created race "Race 2"`)
+	assertContains(t, out, `created race-grid "Grid 1"`)
+	assertContains(t, out, `created race-grid "Grid 2"`)
 	assertContains(t, out, `created car-manufacturer "Porsche"`)
 	assertContains(t, out, `created car-brand "Porsche 911"`)
 	assertContains(t, out, `created car-model "Porsche 911 GT3 Cup (992)"`)
@@ -780,6 +829,9 @@ func TestSetupRunner_ExistingEntities(t *testing.T) {
 	assertContains(t, out, `existing season "Saison XVIII"`)
 	assertContains(t, out, `existing event "Round 1 - Interlagos"`)
 	assertContains(t, out, `existing race "Race 1"`)
+	assertContains(t, out, `existing race "Race 2"`)
+	assertContains(t, out, `existing race-grid "Grid 1"`)
+	assertContains(t, out, `existing race-grid "Grid 2"`)
 	assertContains(t, out, `existing car-manufacturer "Porsche"`)
 	assertContains(t, out, `existing car-brand "Porsche 911"`)
 	assertContains(t, out, `existing car-model "Porsche 911 GT3 Cup (992)"`)
@@ -1149,8 +1201,13 @@ func TestSetupRunner_ExistingEventSkipsRaces(t *testing.T) {
 			rc := &commonv1.Race{}
 			rc.SetId(51)
 			rc.SetName("Race 1")
+
+			rc2 := &commonv1.Race{}
+			rc2.SetId(61)
+			rc2.SetName("Race 2")
+
 			resp := &queryv1.ListRacesResponse{}
-			resp.SetItems([]*commonv1.Race{rc})
+			resp.SetItems([]*commonv1.Race{rc, rc2})
 
 			return connect.NewResponse(resp), nil
 		},
@@ -1182,20 +1239,24 @@ func TestSetupRunner_ExistingEventSkipsRaces(t *testing.T) {
 func TestSetupRunner_NewEventCreatesRaces(t *testing.T) {
 	t.Parallel()
 
-	var capturedRaceName string
+	type capturedRace struct {
+		name        string
+		sessionType commonv1.RaceSessionType
+		sequenceNo  int32
+	}
 
-	var capturedSessionType commonv1.RaceSessionType
-
-	var capturedSequenceNo int32
+	captured := make([]capturedRace, 0, 2)
 
 	cmd := &mockCommandClient{
 		createRace: func(
 			_ context.Context,
 			req *connect.Request[commandv1.CreateRaceRequest],
 		) (*connect.Response[commandv1.CreateRaceResponse], error) {
-			capturedRaceName = req.Msg.GetName()
-			capturedSessionType = req.Msg.GetSessionType()
-			capturedSequenceNo = req.Msg.GetSequenceNo()
+			captured = append(captured, capturedRace{
+				name:        req.Msg.GetName(),
+				sessionType: req.Msg.GetSessionType(),
+				sequenceNo:  req.Msg.GetSequenceNo(),
+			})
 
 			resp := &commandv1.CreateRaceResponse{}
 			rc := &commonv1.Race{}
@@ -1221,22 +1282,25 @@ func TestSetupRunner_NewEventCreatesRaces(t *testing.T) {
 		t.Fatalf("run returned error: %v", err)
 	}
 
-	if capturedRaceName != "Race 1" {
-		t.Errorf("expected race name %q, got %q", "Race 1", capturedRaceName)
+	if len(captured) != 2 {
+		t.Fatalf("expected 2 createRace calls, got %d", len(captured))
 	}
 
-	if capturedSessionType != commonv1.RaceSessionType_RACE_SESSION_TYPE_RACE {
-		t.Errorf(
-			"expected sessionType %v, got %v",
-			commonv1.RaceSessionType_RACE_SESSION_TYPE_RACE, capturedSessionType,
-		)
+	if captured[0].name != "Race 1" || captured[1].name != "Race 2" {
+		t.Errorf("unexpected captured races: %+v", captured)
 	}
 
-	if capturedSequenceNo != 1 {
-		t.Errorf("expected sequenceNo=1, got %d", capturedSequenceNo)
+	if captured[0].sequenceNo != 1 || captured[1].sequenceNo != 2 {
+		t.Errorf("unexpected sequenceNos: %+v", captured)
+	}
+
+	if captured[0].sessionType != commonv1.RaceSessionType_RACE_SESSION_TYPE_RACE ||
+		captured[1].sessionType != commonv1.RaceSessionType_RACE_SESSION_TYPE_RACE {
+		t.Errorf("unexpected session types: %+v", captured)
 	}
 
 	assertContains(t, buf.String(), `created race "Race 1"`)
+	assertContains(t, buf.String(), `created race "Race 2"`)
 }
 
 // ---- runner: validation tests for new entities ----
@@ -1327,6 +1391,48 @@ func TestValidateConfig_MissingRaceName(t *testing.T) {
 	}
 }
 
+func TestValidateConfig_MissingRaceGridName(t *testing.T) {
+	t.Parallel()
+
+	cfg := &SetupConfig{
+		Simulations: []SimulationConfig{
+			{
+				Name: "iRacing",
+				Series: []SeriesConfig{
+					{
+						Name: "Porsche Cup",
+						Seasons: []SeasonConfig{
+							{
+								Name: "Saison XVIII",
+								Events: []EventConfig{
+									{
+										Name: "Round 1",
+										Races: []RaceConfig{
+											{
+												Name:  "Race 1",
+												Grids: []RaceGridConfig{{Name: ""}},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	err := cfg.validate()
+	if err == nil {
+		t.Fatal("expected validation error for empty race grid name, got nil")
+	}
+
+	if !strings.Contains(err.Error(), "grids[0]") {
+		t.Errorf("expected error to mention grids[0], got: %v", err)
+	}
+}
+
 // ---- runner: parent-child scoping ----
 
 func TestSetupRunner_ParentChildScoping(t *testing.T) {
@@ -1403,8 +1509,8 @@ func TestSetupRunner_E2E_FixtureFile(t *testing.T) {
 
 	// Verify all entity types were provisioned (12 entities + 3 alias sets).
 	lines := strings.Split(strings.TrimSpace(buf.String()), "\n")
-	if len(lines) != 15 {
-		t.Errorf("expected 15 output lines, got %d:\n%s", len(lines), buf.String())
+	if len(lines) != 20 {
+		t.Errorf("expected 20 output lines, got %d:\n%s", len(lines), buf.String())
 	}
 
 	// Running again with all entities existing must not create anything.
@@ -1438,6 +1544,11 @@ func existingEntitiesQueryClient() *mockQueryClient {
 		driverID: 40,
 		eventID:  50,
 		raceID:   51,
+		race2ID:  61,
+		grid11ID: 71,
+		grid12ID: 72,
+		grid21ID: 73,
+		grid22ID: 74,
 	})
 }
 
@@ -1449,6 +1560,11 @@ type fixtureIDs struct {
 	driverID                uint32
 	eventID                 uint32
 	raceID                  uint32
+	race2ID                 uint32
+	grid11ID                uint32
+	grid12ID                uint32
+	grid21ID                uint32
+	grid22ID                uint32
 }
 
 func buildExistingQueryClient(ids fixtureIDs) *mockQueryClient {
@@ -1465,6 +1581,7 @@ func buildExistingQueryClient(ids fixtureIDs) *mockQueryClient {
 	qry.listDrivers = buildExistingDrivers(ids)
 	qry.listEvents = buildExistingEvents(ids)
 	qry.listRaces = buildExistingRaces(ids)
+	qry.listRaceGrids = buildExistingRaceGrids(ids)
 
 	return qry
 }
@@ -1673,8 +1790,58 @@ func buildExistingRaces(ids fixtureIDs) func(
 		rc.SetId(ids.raceID)
 		rc.SetName("Race 1")
 		rc.SetEventId(ids.eventID)
+
+		rc2 := &commonv1.Race{}
+		rc2.SetId(ids.race2ID)
+		rc2.SetName("Race 2")
+		rc2.SetEventId(ids.eventID)
+
 		resp := &queryv1.ListRacesResponse{}
-		resp.SetItems([]*commonv1.Race{rc})
+		resp.SetItems([]*commonv1.Race{rc, rc2})
+
+		return connect.NewResponse(resp), nil
+	}
+}
+
+func buildExistingRaceGrids(ids fixtureIDs) func(
+	context.Context, *connect.Request[queryv1.ListRaceGridsRequest],
+) (*connect.Response[queryv1.ListRaceGridsResponse], error) {
+	return func(
+		_ context.Context,
+		req *connect.Request[queryv1.ListRaceGridsRequest],
+	) (*connect.Response[queryv1.ListRaceGridsResponse], error) {
+		items := make([]*commonv1.RaceGrid, 0, 2)
+
+		if req.Msg.GetRaceId() == ids.raceID {
+			rg11 := &commonv1.RaceGrid{}
+			rg11.SetId(ids.grid11ID)
+			rg11.SetRaceId(ids.raceID)
+			rg11.SetName("Grid 1")
+
+			rg12 := &commonv1.RaceGrid{}
+			rg12.SetId(ids.grid12ID)
+			rg12.SetRaceId(ids.raceID)
+			rg12.SetName("Grid 2")
+
+			items = append(items, rg11, rg12)
+		}
+
+		if req.Msg.GetRaceId() == ids.race2ID {
+			rg21 := &commonv1.RaceGrid{}
+			rg21.SetId(ids.grid21ID)
+			rg21.SetRaceId(ids.race2ID)
+			rg21.SetName("Grid 1")
+
+			rg22 := &commonv1.RaceGrid{}
+			rg22.SetId(ids.grid22ID)
+			rg22.SetRaceId(ids.race2ID)
+			rg22.SetName("Grid 2")
+
+			items = append(items, rg21, rg22)
+		}
+
+		resp := &queryv1.ListRaceGridsResponse{}
+		resp.SetItems(items)
 
 		return connect.NewResponse(resp), nil
 	}

@@ -248,6 +248,30 @@ func (r *setupRunner) setupRaceList(
 		if err := r.printResult("race", races[i].Name, id, created); err != nil {
 			return err
 		}
+
+		if err := r.setupRaceGridList(ctx, id, races[i].Grids); err != nil {
+			return fmt.Errorf("race %q grids: %w", races[i].Name, err)
+		}
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupRaceGridList(
+	ctx context.Context,
+	raceID uint32,
+	grids []RaceGridConfig,
+) error {
+	for i := range grids {
+		id, created, err := r.ensureRaceGrid(ctx, raceID, grids[i])
+		if err != nil {
+			return fmt.Errorf("grid %q: %w", grids[i].Name, err)
+		}
+
+		if err := r.printResult("race-grid", grids[i].Name, id, created); err != nil {
+			return err
+		}
 	}
 
 	return nil
