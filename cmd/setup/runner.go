@@ -24,6 +24,11 @@ func (r *setupRunner) run(ctx context.Context) error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
+	simIDs, err := r.setupSimulationsBase(ctx, cfg.Simulations)
+	if err != nil {
+		return fmt.Errorf("setup simulations: %w", err)
+	}
+
 	driverIDs, err := r.setupDrivers(ctx, cfg.Drivers)
 	if err != nil {
 		return fmt.Errorf("setup drivers: %w", err)
@@ -34,14 +39,9 @@ func (r *setupRunner) run(ctx context.Context) error {
 		return fmt.Errorf("setup point systems: %w", err)
 	}
 
-	layoutIDs, err := r.setupTracks(ctx, cfg.Tracks)
+	trackIDs, layoutIDs, err := r.setupTracks(ctx, cfg.Tracks)
 	if err != nil {
 		return fmt.Errorf("setup tracks: %w", err)
-	}
-
-	simIDs, err := r.setupSimulations(ctx, cfg.Simulations, psIDs, layoutIDs)
-	if err != nil {
-		return fmt.Errorf("setup simulations: %w", err)
 	}
 
 	modelIDs, err := r.setupCarManufacturers(ctx, cfg.CarManufacturers)
@@ -49,8 +49,13 @@ func (r *setupRunner) run(ctx context.Context) error {
 		return fmt.Errorf("setup car manufacturers: %w", err)
 	}
 
-	if err := r.setupAliases(ctx, cfg, simIDs, driverIDs, modelIDs, layoutIDs); err != nil {
+	if err := r.setupAliases(ctx, cfg, simIDs, driverIDs, modelIDs, trackIDs, layoutIDs); err != nil {
 		return fmt.Errorf("setup aliases: %w", err)
+	}
+
+	_, err = r.setupSimulations(ctx, cfg.Simulations, psIDs, layoutIDs)
+	if err != nil {
+		return fmt.Errorf("setup simulations: %w", err)
 	}
 
 	return nil
@@ -101,6 +106,30 @@ func (r *setupRunner) setupPointSystems(
 	}
 
 	return ids, nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupSimulationsBase(
+	ctx context.Context,
+	sims []SimulationConfig,
+) (map[string]uint32, error) {
+	simIDs := make(map[string]uint32, len(sims))
+
+	for i := range sims {
+		simID, created, err := r.ensureSimulation(ctx, sims[i].Name, sims[i].IsActive)
+		if err != nil {
+			return nil, fmt.Errorf("simulation %q: %w", sims[i].Name, err)
+		}
+
+		if err := r.printResult("simulation", sims[i].Name, simID, created); err != nil {
+			return nil, err
+		}
+
+		simIDs[sims[i].Name] = simID
+
+	}
+
+	return simIDs, nil
 }
 
 //nolint:whitespace // editor/linter issue
@@ -180,7 +209,7 @@ func (r *setupRunner) setupSeasonList(
 	for i := range seasons {
 		psID := psIDs[seasons[i].PointSystem]
 
-		snID, created, err := r.ensureSeason(ctx, seriesID, psID, seasons[i].Name)
+		snID, created, err := r.ensureSeason(ctx, seriesID, psID, seasons[i])
 		if err != nil {
 			return fmt.Errorf("season %q: %w", seasons[i].Name, err)
 		}
@@ -354,25 +383,27 @@ func (r *setupRunner) setupModelList(
 func (r *setupRunner) setupTracks(
 	ctx context.Context,
 	tracks []TrackConfig,
-) (map[string]uint32, error) {
+) (map[string]uint32, map[string]uint32, error) {
 	layoutIDs := make(map[string]uint32)
+	trackIDs := make(map[string]uint32)
 
 	for i := range tracks {
 		trackID, created, err := r.ensureTrack(ctx, tracks[i].Name)
 		if err != nil {
-			return nil, fmt.Errorf("track %q: %w", tracks[i].Name, err)
+			return nil, nil, fmt.Errorf("track %q: %w", tracks[i].Name, err)
 		}
+		trackIDs[tracks[i].Name] = trackID
 
 		if err := r.printResult("track", tracks[i].Name, trackID, created); err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		if err := r.setupLayoutList(ctx, trackID, tracks[i].Layouts, layoutIDs); err != nil {
-			return nil, fmt.Errorf("track %q layouts: %w", tracks[i].Name, err)
+			return nil, nil, fmt.Errorf("track %q layouts: %w", tracks[i].Name, err)
 		}
 	}
 
-	return layoutIDs, nil
+	return trackIDs, layoutIDs, nil
 }
 
 //nolint:whitespace // editor/linter issue
@@ -391,8 +422,8 @@ func (r *setupRunner) setupLayoutList(
 		if err := r.printResult("track-layout", layouts[i].Name, layID, created); err != nil {
 			return err
 		}
+		layoutIDs[fmt.Sprintf("%d/%s", trackID, layouts[i].Name)] = layID
 
-		layoutIDs[layouts[i].Name] = layID
 	}
 
 	return nil
@@ -402,13 +433,13 @@ func (r *setupRunner) setupLayoutList(
 func (r *setupRunner) setupAliases(
 	ctx context.Context,
 	cfg *SetupConfig,
-	simIDs, driverIDs, modelIDs, layoutIDs map[string]uint32,
+	simIDs, driverIDs, modelIDs, trackIDs, layoutIDs map[string]uint32,
 ) error {
 	if err := r.setupDriverAliases(ctx, cfg.Drivers, simIDs, driverIDs); err != nil {
 		return err
 	}
 
-	if err := r.setupTrackLayoutAliases(ctx, cfg.Tracks, simIDs, layoutIDs); err != nil {
+	if err := r.setupTrackLayoutAliases(ctx, cfg.Tracks, simIDs, trackIDs, layoutIDs); err != nil {
 		return err
 	}
 
@@ -461,12 +492,12 @@ func (r *setupRunner) setupDriverAliases(
 func (r *setupRunner) setupTrackLayoutAliases(
 	ctx context.Context,
 	tracks []TrackConfig,
-	simIDs, layoutIDs map[string]uint32,
+	simIDs, trackIDs, layoutIDs map[string]uint32,
 ) error {
 	for i := range tracks {
 		for j := range tracks[i].Layouts {
 			layout := &tracks[i].Layouts[j]
-			layoutID := layoutIDs[layout.Name]
+			layoutID := layoutIDs[fmt.Sprintf("%d/%s", trackIDs[tracks[i].Name], layout.Name)]
 
 			for k := range layout.Simulations {
 				simCfg := &layout.Simulations[k]
@@ -493,6 +524,9 @@ func (r *setupRunner) setupTrackLayoutAliases(
 						"track layout %q simulation %q aliases: %w",
 						layout.Name, simCfg.Name, err,
 					)
+				}
+				for _, simAlias := range simCfg.Aliases {
+					layoutIDs[simAlias] = layoutID
 				}
 
 				if err := r.printAliasResult("track-layout", layout.Name, simCfg.Name); err != nil {

@@ -17,7 +17,7 @@ import (
 )
 
 func NewCmd() *cobra.Command {
-	var raceID uint32
+	var gridID uint32
 	//nolint:lll // readability
 	cmd := &cobra.Command{
 		Use:   "preview",
@@ -27,8 +27,8 @@ func NewCmd() *cobra.Command {
 			logger := log.GetFromContext(cmd.Context()).Named("rpc")
 
 			runner := &previewCommand{
-				raceID: raceID,
-				out:    cmd.OutOrStdout(),
+				raceGridID: gridID,
+				out:        cmd.OutOrStdout(),
 				qrySvc: queryclient.NewQueryServiceClient(
 					config.APIAddr, logger,
 				),
@@ -40,9 +40,9 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Uint32Var(&raceID, "race-id", 0, "ID of the race to preview results for")
-	if err := cmd.MarkFlagRequired("race-id"); err != nil {
-		panic(fmt.Sprintf("failed to mark 'race-id' flag as required: %v", err))
+	cmd.Flags().Uint32Var(&gridID, "grid-id", 0, "ID of the race grid to preview results for")
+	if err := cmd.MarkFlagRequired("grid-id"); err != nil {
+		panic(fmt.Sprintf("failed to mark 'grid-id' flag as required: %v", err))
 	}
 
 	return cmd
@@ -63,17 +63,17 @@ type importClient interface {
 }
 
 type previewCommand struct {
-	raceID    uint32
-	out       io.Writer
-	qrySvc    queryClient
-	importSvc importClient
+	raceGridID uint32
+	out        io.Writer
+	qrySvc     queryClient
+	importSvc  importClient
 }
 
 func (c *previewCommand) run(ctx context.Context) error {
 	resp, err := c.importSvc.GetPreprocessPreview(
 		ctx,
 		connect.NewRequest(&importv1.GetPreprocessPreviewRequest{
-			RaceId: c.raceID,
+			RaceGridId: c.raceGridID,
 		}),
 	)
 	if err != nil {
@@ -91,9 +91,9 @@ func (c *previewCommand) run(ctx context.Context) error {
 
 	for _, row := range rows {
 		if _, err = fmt.Fprintf(c.out,
-			"  row: id=%d race_id=%d driver_id=%d car_model_id=%d position=%d laps=%d\n",
+			"  row: id=%d race_grid_id=%d driver_id=%d car_model_id=%d position=%d laps=%d\n",
 			row.GetId(),
-			row.GetRaceId(),
+			row.GetRaceGridId(),
 			row.GetDriverId(),
 			row.GetCarModelId(),
 			row.GetFinishingPosition(),

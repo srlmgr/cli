@@ -51,7 +51,7 @@ func (m *mockImportClient) UploadResultsFile(
 	}
 
 	resp := &importv1.UploadResultsFileResponse{}
-	resp.SetRaceId(42)
+	resp.SetRaceGridId(42)
 	resp.SetProcessingState("PENDING")
 
 	return connect.NewResponse(resp), nil
@@ -65,7 +65,7 @@ func TestUploadCommand_Success(t *testing.T) {
 	var buf bytes.Buffer
 
 	runner := &uploadCommand{
-		raceID:       1,
+		raceGridID:   1,
 		importFormat: "json",
 		payload:      []byte(`{"results": []}`),
 		out:          &buf,
@@ -78,8 +78,8 @@ func TestUploadCommand_Success(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, "race_id=42") {
-		t.Errorf("expected output to contain race_id=42, got: %s", out)
+	if !strings.Contains(out, "race_grid_id=42") {
+		t.Errorf("expected output to contain race_grid_id=42, got: %s", out)
 	}
 	if !strings.Contains(out, "processing_state=PENDING") {
 		t.Errorf("expected output to contain processing_state=PENDING, got: %s", out)
@@ -90,7 +90,7 @@ func TestUploadCommand_InvalidImportFormat(t *testing.T) {
 	t.Parallel()
 
 	runner := &uploadCommand{
-		raceID:       1,
+		raceGridID:   1,
 		importFormat: "invalid-format",
 		payload:      []byte("{}"),
 		out:          &bytes.Buffer{},
@@ -111,7 +111,7 @@ func TestUploadCommand_UploadError(t *testing.T) {
 	t.Parallel()
 
 	runner := &uploadCommand{
-		raceID:       1,
+		raceGridID:   1,
 		importFormat: "json",
 		payload:      []byte("{}"),
 		out:          &bytes.Buffer{},

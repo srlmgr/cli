@@ -15,7 +15,7 @@ import (
 )
 
 func NewCmd() *cobra.Command {
-	var raceID uint32
+	var gridID uint32
 	//nolint:lll // readability
 	cmd := &cobra.Command{
 		Use:   "resolve",
@@ -25,8 +25,8 @@ func NewCmd() *cobra.Command {
 			logger := log.GetFromContext(cmd.Context()).Named("rpc")
 
 			runner := &resolveCommand{
-				raceID: raceID,
-				out:    cmd.OutOrStdout(),
+				raceGridID: gridID,
+				out:        cmd.OutOrStdout(),
 				importSvc: importclient.NewImportServiceClient(
 					config.APIAddr, config.APIToken, logger,
 				),
@@ -35,9 +35,9 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Uint32Var(&raceID, "race-id", 0, "ID of the race to resolve mappings for")
-	if err := cmd.MarkFlagRequired("race-id"); err != nil {
-		panic(fmt.Sprintf("failed to mark 'race-id' flag as required: %v", err))
+	cmd.Flags().Uint32Var(&gridID, "grid-id", 0, "ID of the race grid to resolve mappings for")
+	if err := cmd.MarkFlagRequired("grid-id"); err != nil {
+		panic(fmt.Sprintf("failed to mark 'grid-id' flag as required: %v", err))
 	}
 
 	return cmd
@@ -51,16 +51,16 @@ type importClient interface {
 }
 
 type resolveCommand struct {
-	raceID    uint32
-	out       io.Writer
-	importSvc importClient
+	raceGridID uint32
+	out        io.Writer
+	importSvc  importClient
 }
 
 func (c *resolveCommand) run(ctx context.Context) error {
 	resp, err := c.importSvc.ResolveMappings(
 		ctx,
 		connect.NewRequest(&importv1.ResolveMappingsRequest{
-			RaceId: c.raceID,
+			RaceGridId: c.raceGridID,
 		}),
 	)
 	if err != nil {

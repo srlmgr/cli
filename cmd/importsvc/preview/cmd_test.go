@@ -61,10 +61,10 @@ func TestPreviewCommand_Success(t *testing.T) {
 	var buf bytes.Buffer
 
 	runner := &previewCommand{
-		raceID:    1,
-		out:       &buf,
-		qrySvc:    &mockQueryClient{},
-		importSvc: &mockImportClient{},
+		raceGridID: 1,
+		out:        &buf,
+		qrySvc:     &mockQueryClient{},
+		importSvc:  &mockImportClient{},
 	}
 
 	if err := runner.run(context.Background()); err != nil {
@@ -88,7 +88,7 @@ func TestPreviewCommand_WithRows(t *testing.T) {
 
 	row := &commonv1.ResultEntry{}
 	row.SetId(1)
-	row.SetRaceId(2)
+	row.SetRaceGridId(2)
 	row.SetDriverId(3)
 	row.SetCarModelId(4)
 	row.SetFinishingPosition(1)
@@ -99,9 +99,9 @@ func TestPreviewCommand_WithRows(t *testing.T) {
 	unresolved.SetMappingType("driver")
 
 	runner := &previewCommand{
-		raceID: 2,
-		out:    &buf,
-		qrySvc: &mockQueryClient{},
+		raceGridID: 2,
+		out:        &buf,
+		qrySvc:     &mockQueryClient{},
 		importSvc: &mockImportClient{
 			getPreprocessPreview: func(_ context.Context, _ *connect.Request[importv1.GetPreprocessPreviewRequest]) (*connect.Response[importv1.GetPreprocessPreviewResponse], error) {
 				resp := &importv1.GetPreprocessPreviewResponse{}
@@ -135,9 +135,9 @@ func TestPreviewCommand_PreviewError(t *testing.T) {
 	t.Parallel()
 
 	runner := &previewCommand{
-		raceID: 1,
-		out:    &bytes.Buffer{},
-		qrySvc: &mockQueryClient{},
+		raceGridID: 1,
+		out:        &bytes.Buffer{},
+		qrySvc:     &mockQueryClient{},
 		importSvc: &mockImportClient{
 			getPreprocessPreview: func(_ context.Context, _ *connect.Request[importv1.GetPreprocessPreviewRequest]) (*connect.Response[importv1.GetPreprocessPreviewResponse], error) {
 				return nil, errors.New("preview failed")

@@ -20,7 +20,7 @@ import (
 
 //nolint:lll,funlen // readability
 func NewCmd() *cobra.Command {
-	var raceID uint32
+	var gridID uint32
 	var importFormat string
 	var filename string
 
@@ -37,7 +37,7 @@ func NewCmd() *cobra.Command {
 			}
 
 			runner := &uploadCommand{
-				raceID:       raceID,
+				raceGridID:   gridID,
 				importFormat: importFormat,
 				payload:      payload,
 				out:          cmd.OutOrStdout(),
@@ -52,9 +52,9 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Uint32Var(&raceID, "race-id", 0, "ID of the race to upload results for")
-	if err := cmd.MarkFlagRequired("race-id"); err != nil {
-		panic(fmt.Sprintf("failed to mark 'race-id' flag as required: %v", err))
+	cmd.Flags().Uint32Var(&gridID, "grid-id", 0, "ID of the race grid to upload results for")
+	if err := cmd.MarkFlagRequired("grid-id"); err != nil {
+		panic(fmt.Sprintf("failed to mark 'grid-id' flag as required: %v", err))
 	}
 
 	cmd.Flags().
@@ -86,7 +86,7 @@ type importClient interface {
 }
 
 type uploadCommand struct {
-	raceID       uint32
+	raceGridID   uint32
 	importFormat string
 	payload      []byte
 	out          io.Writer
@@ -103,7 +103,7 @@ func (c *uploadCommand) run(ctx context.Context) error {
 	resp, err := c.importSvc.UploadResultsFile(
 		ctx,
 		connect.NewRequest(&importv1.UploadResultsFileRequest{
-			RaceId:       c.raceID,
+			RaceGridId:   c.raceGridID,
 			ImportFormat: format,
 			Payload:      c.payload,
 		}),
@@ -114,8 +114,8 @@ func (c *uploadCommand) run(ctx context.Context) error {
 
 	if _, err = fmt.Fprintf(
 		c.out,
-		"Uploaded results file: race_id=%d processing_state=%s\n",
-		resp.Msg.GetRaceId(),
+		"Uploaded results file: race_grid_id=%d processing_state=%s\n",
+		resp.Msg.GetRaceGridId(),
 		resp.Msg.GetProcessingState(),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)

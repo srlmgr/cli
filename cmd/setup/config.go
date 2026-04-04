@@ -53,9 +53,14 @@ type SeriesConfig struct {
 
 // SeasonConfig defines a season and its associated point system name.
 type SeasonConfig struct {
-	Name        string        `yaml:"name"`
-	PointSystem string        `yaml:"pointSystem"`
-	Events      []EventConfig `yaml:"events"`
+	Name           string        `yaml:"name"`
+	PointSystem    string        `yaml:"pointSystem"`
+	HasTeams       bool          `yaml:"hasTeams"`
+	Multiclass     bool          `yaml:"multiclass"`
+	TeamBased      bool          `yaml:"teamBased"`
+	TeamPointsTopN int32         `yaml:"teamPointsTopN"`
+	SkipEvents     int32         `yaml:"skipEvents"`
+	Events         []EventConfig `yaml:"events"`
 }
 
 // EventConfig defines an event under a season.

@@ -40,9 +40,9 @@ func TestResolveCommand_Success(t *testing.T) {
 	var buf bytes.Buffer
 
 	runner := &resolveCommand{
-		raceID:    7,
-		out:       &buf,
-		importSvc: &mockImportClient{},
+		raceGridID: 7,
+		out:        &buf,
+		importSvc:  &mockImportClient{},
 	}
 
 	if err := runner.run(context.Background()); err != nil {
@@ -61,11 +61,11 @@ func TestResolveCommand_PassesRaceID(t *testing.T) {
 	var capturedRaceID uint32
 
 	runner := &resolveCommand{
-		raceID: 42,
-		out:    &bytes.Buffer{},
+		raceGridID: 42,
+		out:        &bytes.Buffer{},
 		importSvc: &mockImportClient{
 			resolveMappings: func(_ context.Context, req *connect.Request[importv1.ResolveMappingsRequest]) (*connect.Response[importv1.ResolveMappingsResponse], error) {
-				capturedRaceID = req.Msg.GetRaceId()
+				capturedRaceID = req.Msg.GetRaceGridId()
 				resp := &importv1.ResolveMappingsResponse{}
 				resp.SetUnresolvedMappings(0)
 				return connect.NewResponse(resp), nil
@@ -78,7 +78,7 @@ func TestResolveCommand_PassesRaceID(t *testing.T) {
 	}
 
 	if capturedRaceID != 42 {
-		t.Errorf("expected race_id=42, got %d", capturedRaceID)
+		t.Errorf("expected race_grid_id=42, got %d", capturedRaceID)
 	}
 }
 
@@ -86,8 +86,8 @@ func TestResolveCommand_ServiceError(t *testing.T) {
 	t.Parallel()
 
 	runner := &resolveCommand{
-		raceID: 1,
-		out:    &bytes.Buffer{},
+		raceGridID: 1,
+		out:        &bytes.Buffer{},
 		importSvc: &mockImportClient{
 			resolveMappings: func(_ context.Context, _ *connect.Request[importv1.ResolveMappingsRequest]) (*connect.Response[importv1.ResolveMappingsResponse], error) {
 				return nil, errors.New("service error")

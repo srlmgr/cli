@@ -119,7 +119,7 @@ func (r *setupRunner) ensureSeries(
 
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureSeason(
-	ctx context.Context, seriesID, psID uint32, name string,
+	ctx context.Context, seriesID, psID uint32, sCfg SeasonConfig,
 ) (uint32, bool, error) {
 	return findOrCreate(ctx,
 		func(ctx context.Context) ([]*commonv1.Season, error) {
@@ -134,14 +134,19 @@ func (r *setupRunner) ensureSeason(
 
 			return resp.Msg.GetItems(), nil
 		},
-		func(s *commonv1.Season) bool { return s.GetName() == name },
+		func(s *commonv1.Season) bool { return s.GetName() == sCfg.Name },
 		func(s *commonv1.Season) uint32 { return s.GetId() },
 		func(ctx context.Context) (uint32, error) {
 			resp, err := r.cmdSvc.CreateSeason(ctx,
 				connect.NewRequest(&commandv1.CreateSeasonRequest{
-					SeriesId:      seriesID,
-					Name:          name,
-					PointSystemId: psID,
+					SeriesId:       seriesID,
+					Name:           sCfg.Name,
+					HasTeams:       sCfg.HasTeams,
+					IsMulticlass:   sCfg.Multiclass,
+					IsTeamBased:    sCfg.TeamBased,
+					TeamPointsTopN: sCfg.TeamPointsTopN,
+					SkipEvents:     sCfg.SkipEvents,
+					PointSystemId:  psID,
 				}),
 			)
 			if err != nil {
