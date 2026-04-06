@@ -234,8 +234,8 @@ func (r *setupRunner) ensureCarBrand(
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureCarModel(
 	ctx context.Context, mfrID, brandID uint32, name string,
-) (uint32, bool, error) {
-	return findOrCreate(ctx,
+) (*commonv1.CarModel, bool, error) {
+	return findOrCreateFull(ctx,
 		func(ctx context.Context) ([]*commonv1.CarModel, error) {
 			resp, err := r.qrySvc.ListCarModels(ctx,
 				connect.NewRequest(&queryv1.ListCarModelsRequest{
@@ -252,7 +252,7 @@ func (r *setupRunner) ensureCarModel(
 			return m.GetBrandId() == brandID && m.GetName() == name
 		},
 		func(m *commonv1.CarModel) uint32 { return m.GetId() },
-		func(ctx context.Context) (uint32, error) {
+		func(ctx context.Context) (*commonv1.CarModel, error) {
 			resp, err := r.cmdSvc.CreateCarModel(ctx,
 				connect.NewRequest(&commandv1.CreateCarModelRequest{
 					BrandId: brandID,
@@ -260,13 +260,58 @@ func (r *setupRunner) ensureCarModel(
 				}),
 			)
 			if err != nil {
-				return 0, fmt.Errorf("create car model: %w", err)
+				return nil, fmt.Errorf("create car model: %w", err)
 			}
 
-			return resp.Msg.GetCarModel().GetId(), nil
+			return resp.Msg.GetCarModel(), nil
 		},
 		r.dryRun,
 	)
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) ensureCarClass(
+	ctx context.Context, name string,
+) (*commonv1.CarClass, bool, error) {
+	return findOrCreateFull(ctx,
+		func(ctx context.Context) ([]*commonv1.CarClass, error) {
+			resp, err := r.qrySvc.ListCarClasses(ctx,
+				connect.NewRequest(&queryv1.ListCarClassesRequest{}),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("list car classes: %w", err)
+			}
+
+			return resp.Msg.GetItems(), nil
+		},
+		func(c *commonv1.CarClass) bool { return c.GetName() == name },
+		func(c *commonv1.CarClass) uint32 { return c.GetId() },
+		func(ctx context.Context) (*commonv1.CarClass, error) {
+			resp, err := r.cmdSvc.CreateCarClass(ctx,
+				connect.NewRequest(&commandv1.CreateCarClassRequest{
+					Name: name,
+				}),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("create car class: %w", err)
+			}
+
+			return resp.Msg.GetCarClass(), nil
+		},
+		r.dryRun,
+	)
+}
+
+func (r *setupRunner) ensureCarModelInClass(ctx context.Context, carClassID, carModelID uint32) error {
+	if r.dryRun {
+		return nil
+	}
+	_, err := r.cmdSvc.AssignCarModelToCarClass(ctx,
+		connect.NewRequest(&commandv1.AssignCarModelToCarClassRequest{
+			CarClassId: carClassID,
+			CarModelId: carModelID,
+		}))
+	return err
 }
 
 //nolint:whitespace // editor/linter issue
@@ -341,8 +386,8 @@ func (r *setupRunner) ensureTrackLayout(
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureDriver(
 	ctx context.Context, cfg DriverConfig,
-) (uint32, bool, error) {
-	return findOrCreate(ctx,
+) (*commonv1.Driver, bool, error) {
+	return findOrCreateFull(ctx,
 		func(ctx context.Context) ([]*commonv1.Driver, error) {
 			resp, err := r.qrySvc.ListDrivers(ctx,
 				connect.NewRequest(&queryv1.ListDriversRequest{}),
@@ -355,7 +400,7 @@ func (r *setupRunner) ensureDriver(
 		},
 		func(d *commonv1.Driver) bool { return d.GetName() == cfg.Name },
 		func(d *commonv1.Driver) uint32 { return d.GetId() },
-		func(ctx context.Context) (uint32, error) {
+		func(ctx context.Context) (*commonv1.Driver, error) {
 			resp, err := r.cmdSvc.CreateDriver(ctx,
 				connect.NewRequest(&commandv1.CreateDriverRequest{
 					Name:       cfg.Name,
@@ -364,10 +409,46 @@ func (r *setupRunner) ensureDriver(
 				}),
 			)
 			if err != nil {
-				return 0, fmt.Errorf("create driver: %w", err)
+				return nil, fmt.Errorf("create driver: %w", err)
 			}
 
-			return resp.Msg.GetDriver().GetId(), nil
+			return resp.Msg.GetDriver(), nil
+		},
+		r.dryRun,
+	)
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) ensureTeam(
+	ctx context.Context, seasonID uint32, cfg TeamConfig,
+) (uint32, bool, error) {
+	return findOrCreate(ctx,
+		func(ctx context.Context) ([]*commonv1.Team, error) {
+			resp, err := r.qrySvc.ListTeams(ctx,
+				connect.NewRequest(&queryv1.ListTeamsRequest{
+					SeasonId: seasonID,
+				}),
+			)
+			if err != nil {
+				return nil, fmt.Errorf("list teams: %w", err)
+			}
+
+			return resp.Msg.GetItems(), nil
+		},
+		func(t *commonv1.Team) bool { return t.GetName() == cfg.Name },
+		func(t *commonv1.Team) uint32 { return t.GetId() },
+		func(ctx context.Context) (uint32, error) {
+			resp, err := r.cmdSvc.CreateTeam(ctx,
+				connect.NewRequest(&commandv1.CreateTeamRequest{
+					SeasonId: seasonID,
+					Name:     cfg.Name,
+				}),
+			)
+			if err != nil {
+				return 0, fmt.Errorf("create team: %w", err)
+			}
+
+			return resp.Msg.GetTeam().GetId(), nil
 		},
 		r.dryRun,
 	)
@@ -411,6 +492,7 @@ func (r *setupRunner) ensureEvent(
 				SeasonId:        seasonID,
 				TrackLayoutId:   trackLayoutID,
 				Name:            cfg.Name,
+				SequenceNo:      cfg.SequenceNo,
 				Status:          status,
 				ProcessingState: processingState,
 			}
@@ -525,6 +607,27 @@ func (r *setupRunner) ensureRaceGrid(
 		},
 		r.dryRun,
 	)
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setTeamMembers(
+	ctx context.Context, teamID uint32, drivers []uint32,
+) error {
+	if r.dryRun {
+		return nil
+	}
+
+	_, err := r.cmdSvc.SetTeamMembers(ctx,
+		connect.NewRequest(&commandv1.SetTeamMembersRequest{
+			TeamId:    teamID,
+			DriverIds: drivers,
+		}),
+	)
+	if err != nil {
+		return fmt.Errorf("set team members: %w", err)
+	}
+
+	return nil
 }
 
 //nolint:whitespace // editor/linter issue

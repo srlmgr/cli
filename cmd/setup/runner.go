@@ -5,14 +5,18 @@ import (
 	"context"
 	"fmt"
 	"io"
+
+	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 )
 
 type setupRunner struct {
-	filePath string
-	dryRun   bool
-	out      io.Writer
-	cmdSvc   commandClient
-	qrySvc   queryClient
+	filePath       string
+	dryRun         bool
+	out            io.Writer
+	cmdSvc         commandClient
+	qrySvc         queryClient
+	driverLookup   map[string]*commonv1.Driver
+	carModelLookup map[string]*commonv1.CarModel
 }
 
 // run loads the config and provisions all entities in the required order.
@@ -43,10 +47,15 @@ func (r *setupRunner) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("setup tracks: %w", err)
 	}
-
+	r.carModelLookup = make(map[string]*commonv1.CarModel, 0)
 	modelIDs, err := r.setupCarManufacturers(ctx, cfg.CarManufacturers)
 	if err != nil {
 		return fmt.Errorf("setup car manufacturers: %w", err)
+	}
+
+	_, err = r.setupCarClasses(ctx, cfg.CarClasses)
+	if err != nil {
+		return fmt.Errorf("setup car classes: %w", err)
 	}
 
 	if err := r.setupAliases(ctx, cfg, simIDs, driverIDs, modelIDs, trackIDs, layoutIDs); err != nil {
@@ -67,19 +76,21 @@ func (r *setupRunner) setupDrivers(
 	drivers []DriverConfig,
 ) (map[string]uint32, error) {
 	ids := make(map[string]uint32, len(drivers))
+	r.driverLookup = make(map[string]*commonv1.Driver, len(drivers))
 
 	for i := range drivers {
 		d := drivers[i]
-		id, created, err := r.ensureDriver(ctx, d)
+		pDriver, created, err := r.ensureDriver(ctx, d)
 		if err != nil {
 			return nil, fmt.Errorf("driver %q: %w", d.Name, err)
 		}
 
-		if err := r.printResult("driver", d.Name, id, created); err != nil {
+		if err := r.printResult("driver", d.Name, pDriver.GetId(), created); err != nil {
 			return nil, err
 		}
 
-		ids[d.Name] = id
+		ids[d.Name] = pDriver.GetId()
+		r.driverLookup[d.Name] = pDriver
 	}
 
 	return ids, nil
@@ -218,11 +229,58 @@ func (r *setupRunner) setupSeasonList(
 			return err
 		}
 
+		if err := r.setupTeamList(ctx, snID, seasons[i].Teams); err != nil {
+			return fmt.Errorf("season %q teams: %w", seasons[i].Name, err)
+		}
 		if err := r.setupEventList(ctx, snID, seasons[i].Events, layoutIDs); err != nil {
 			return fmt.Errorf("season %q events: %w", seasons[i].Name, err)
 		}
+
 	}
 
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupTeamList(
+	ctx context.Context,
+	seasonID uint32,
+	teams []TeamConfig,
+) error {
+	for i := range teams {
+		tmID, created, err := r.ensureTeam(ctx, seasonID, teams[i])
+		if err != nil {
+			return fmt.Errorf("team %q: %w", teams[i].Name, err)
+		}
+
+		if err := r.printResult("team", teams[i].Name, tmID, created); err != nil {
+			return err
+		}
+
+		if err := r.setupTeamMembers(ctx, tmID, teams[i].Drivers); err != nil {
+			return fmt.Errorf("team %q members: %w", teams[i].Name, err)
+		}
+	}
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupTeamMembers(
+	ctx context.Context,
+	teamID uint32,
+	drivers []TeamDriverConfig,
+) error {
+	members := make([]uint32, len(drivers))
+	for i := range drivers {
+		pDriver, ok := r.driverLookup[drivers[i].Name]
+		if !ok {
+			return fmt.Errorf("driver %q not found", drivers[i].Name)
+		}
+		members[i] = pDriver.GetId()
+	}
+	if err := r.setTeamMembers(ctx, teamID, members); err != nil {
+		return fmt.Errorf("set team members: %w", err)
+	}
 	return nil
 }
 
@@ -369,11 +427,55 @@ func (r *setupRunner) setupModelList(
 			return fmt.Errorf("car model %q: %w", models[i].Name, err)
 		}
 
-		if err := r.printResult("car-model", models[i].Name, modelID, created); err != nil {
+		if err := r.printResult("car-model", models[i].Name, modelID.GetId(), created); err != nil {
 			return err
 		}
 
-		modelIDs[models[i].Name] = modelID
+		r.carModelLookup[models[i].Name] = modelID
+		modelIDs[models[i].Name] = modelID.GetId()
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupCarClasses(
+	ctx context.Context,
+	classConfigs []CarClassConfig,
+) (map[string]uint32, error) {
+	modelIDs := make(map[string]uint32)
+
+	for i := range classConfigs {
+		carClass, created, err := r.ensureCarClass(ctx, classConfigs[i].Name)
+		if err != nil {
+			return nil, fmt.Errorf("car class %q: %w", classConfigs[i].Name, err)
+		}
+		//nolint:lll // readability
+		if err := r.printResult("car-class", classConfigs[i].Name, carClass.GetId(), created); err != nil {
+			return nil, err
+		}
+
+		if err := r.setupCarClassModelList(ctx, carClass.GetId(), classConfigs[i].Models); err != nil {
+			return nil, fmt.Errorf("car class %q models: %w", classConfigs[i].Name, err)
+		}
+	}
+
+	return modelIDs, nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupCarClassModelList(
+	ctx context.Context,
+	carClassID uint32,
+	models []CarClassModelConfig,
+) error {
+	for i := range models {
+		carModel := r.carModelLookup[models[i].Name]
+		err := r.ensureCarModelInClass(ctx, carClassID, carModel.GetId())
+		if err != nil {
+			return fmt.Errorf("car model %q: %w", models[i].Name, err)
+		}
+
 	}
 
 	return nil

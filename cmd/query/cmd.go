@@ -5,6 +5,7 @@ import (
 
 	"github.com/srlmgr/cli/cmd/query/get"
 	"github.com/srlmgr/cli/cmd/query/list"
+	"github.com/srlmgr/cli/cmd/query/summary"
 )
 
 func NewCmd() *cobra.Command {
@@ -16,5 +17,6 @@ func NewCmd() *cobra.Command {
 
 	queryCmd.AddCommand(list.NewCmd())
 	queryCmd.AddCommand(get.NewCmd())
+	queryCmd.AddCommand(summary.NewCmd())
 	return queryCmd
 }

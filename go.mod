@@ -3,8 +3,8 @@ module github.com/srlmgr/cli
 go 1.26
 
 require (
-	buf.build/gen/go/srlmgr/api/connectrpc/go v1.19.1-20260404084507-da7b5d4b21f2.2
-	buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260404084507-da7b5d4b21f2.1
+	buf.build/gen/go/srlmgr/api/connectrpc/go v1.19.1-20260406155837-a3159c7fa1e9.2
+	buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260406155837-a3159c7fa1e9.1
 	connectrpc.com/connect v1.19.1
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
@@ -42,6 +42,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.2.4 // indirect
 	github.com/sagikazarmark/locafero v0.11.0 // indirect
+	github.com/samber/lo v1.53.0 // indirect
 	github.com/sourcegraph/conc v0.3.1-0.20240121214520-5f936abd7ae8 // indirect
 	github.com/spf13/afero v1.15.0 // indirect
 	github.com/spf13/cast v1.10.0 // indirect

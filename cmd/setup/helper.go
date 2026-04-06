@@ -37,3 +37,35 @@ func findOrCreate[T any](
 
 	return id, true, nil
 }
+
+func findOrCreateFull[T any](
+	ctx context.Context,
+	list func(context.Context) ([]T, error),
+	match func(T) bool,
+	getID func(T) uint32,
+	create func(context.Context) (T, error),
+	dryRun bool,
+) (T, bool, error) {
+	items, err := list(ctx)
+	var zero T
+	if err != nil {
+		return zero, false, err
+	}
+
+	for _, item := range items {
+		if match(item) {
+			return item, false, nil
+		}
+	}
+
+	if dryRun {
+		return zero, true, nil
+	}
+
+	item, err := create(ctx)
+	if err != nil {
+		return zero, false, err
+	}
+
+	return item, true, nil
+}

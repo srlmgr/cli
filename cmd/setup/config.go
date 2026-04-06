@@ -15,6 +15,7 @@ type SetupConfig struct {
 	PointSystems     []PointSystemConfig     `yaml:"pointSystems"`
 	Simulations      []SimulationConfig      `yaml:"simulations"`
 	CarManufacturers []CarManufacturerConfig `yaml:"carManufacturers"`
+	CarClasses       []CarClassConfig        `yaml:"carClasses"`
 	Tracks           []TrackConfig           `yaml:"tracks"`
 }
 
@@ -61,11 +62,24 @@ type SeasonConfig struct {
 	TeamPointsTopN int32         `yaml:"teamPointsTopN"`
 	SkipEvents     int32         `yaml:"skipEvents"`
 	Events         []EventConfig `yaml:"events"`
+	Teams          []TeamConfig  `yaml:"teams"`
+}
+
+// TeamConfig defines a team under a season.
+type TeamConfig struct {
+	Name    string             `yaml:"name"`
+	Drivers []TeamDriverConfig `yaml:"drivers"`
+}
+
+// TeamDriverConfig defines a driver under a team.
+type TeamDriverConfig struct {
+	Name string `yaml:"name"`
 }
 
 // EventConfig defines an event under a season.
 type EventConfig struct {
 	Name            string                     `yaml:"name"`
+	SequenceNo      uint32                     `yaml:"sequenceNo"`
 	TrackLayout     string                     `yaml:"trackLayout"`
 	Date            string                     `yaml:"date"`
 	Status          EventStatusConfig          `yaml:"status"`
@@ -139,6 +153,15 @@ type TrackConfig struct {
 type LayoutConfig struct {
 	Name        string                   `yaml:"name"`
 	Simulations []EntitySimulationConfig `yaml:"simulations"`
+}
+
+// CarClassConfig defines a car class.
+type CarClassConfig struct {
+	Name   string                `yaml:"name"`
+	Models []CarClassModelConfig `yaml:"models"`
+}
+type CarClassModelConfig struct {
+	Name string `yaml:"name"`
 }
 
 // loadConfig reads, parses, and validates the YAML setup file.

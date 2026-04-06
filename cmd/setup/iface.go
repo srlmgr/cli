@@ -55,11 +55,23 @@ type commandClient interface {
 		context.Context,
 		*connect.Request[commandv1.CreateCarModelRequest],
 	) (*connect.Response[commandv1.CreateCarModelResponse], error)
+	CreateCarClass(
+		context.Context,
+		*connect.Request[commandv1.CreateCarClassRequest],
+	) (*connect.Response[commandv1.CreateCarClassResponse], error)
+	AssignCarModelToCarClass(
+		context.Context,
+		*connect.Request[commandv1.AssignCarModelToCarClassRequest],
+	) (*connect.Response[commandv1.AssignCarModelToCarClassResponse], error)
 
 	CreateDriver(
 		context.Context,
 		*connect.Request[commandv1.CreateDriverRequest],
 	) (*connect.Response[commandv1.CreateDriverResponse], error)
+	CreateTeam(
+		context.Context,
+		*connect.Request[commandv1.CreateTeamRequest],
+	) (*connect.Response[commandv1.CreateTeamResponse], error)
 
 	CreateEvent(
 		context.Context,
@@ -75,6 +87,11 @@ type commandClient interface {
 		context.Context,
 		*connect.Request[commandv1.CreateRaceGridRequest],
 	) (*connect.Response[commandv1.CreateRaceGridResponse], error)
+
+	SetTeamMembers(
+		context.Context,
+		*connect.Request[commandv1.SetTeamMembersRequest],
+	) (*connect.Response[commandv1.SetTeamMembersResponse], error)
 
 	SetSimulationDriverAliases(
 		context.Context,
@@ -138,11 +155,19 @@ type queryClient interface {
 		context.Context,
 		*connect.Request[queryv1.ListCarModelsRequest],
 	) (*connect.Response[queryv1.ListCarModelsResponse], error)
+	ListCarClasses(
+		context.Context,
+		*connect.Request[queryv1.ListCarClassesRequest],
+	) (*connect.Response[queryv1.ListCarClassesResponse], error)
 
 	ListDrivers(
 		context.Context,
 		*connect.Request[queryv1.ListDriversRequest],
 	) (*connect.Response[queryv1.ListDriversResponse], error)
+	ListTeams(
+		context.Context,
+		*connect.Request[queryv1.ListTeamsRequest],
+	) (*connect.Response[queryv1.ListTeamsResponse], error)
 
 	ListEvents(
 		context.Context,
