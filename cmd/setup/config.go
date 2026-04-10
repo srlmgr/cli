@@ -54,15 +54,21 @@ type SeriesConfig struct {
 
 // SeasonConfig defines a season and its associated point system name.
 type SeasonConfig struct {
-	Name           string        `yaml:"name"`
-	PointSystem    string        `yaml:"pointSystem"`
-	HasTeams       bool          `yaml:"hasTeams"`
-	Multiclass     bool          `yaml:"multiclass"`
-	TeamBased      bool          `yaml:"teamBased"`
-	TeamPointsTopN int32         `yaml:"teamPointsTopN"`
-	SkipEvents     int32         `yaml:"skipEvents"`
-	Events         []EventConfig `yaml:"events"`
-	Teams          []TeamConfig  `yaml:"teams"`
+	Name           string                 `yaml:"name"`
+	PointSystem    string                 `yaml:"pointSystem"`
+	HasTeams       bool                   `yaml:"hasTeams"`
+	Multiclass     bool                   `yaml:"multiclass"`
+	TeamBased      bool                   `yaml:"teamBased"`
+	TeamPointsTopN int32                  `yaml:"teamPointsTopN"`
+	SkipEvents     int32                  `yaml:"skipEvents"`
+	Events         []EventConfig          `yaml:"events"`
+	Teams          []TeamConfig           `yaml:"teams"`
+	CarClasses     []SeasonCarClassConfig `yaml:"carClasses"`
+}
+
+// SeasonCarClassConfig defines a car class under a season.
+type SeasonCarClassConfig struct {
+	Name string `yaml:"name"`
 }
 
 // TeamConfig defines a team under a season.

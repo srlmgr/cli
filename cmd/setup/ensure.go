@@ -314,6 +314,18 @@ func (r *setupRunner) ensureCarModelInClass(ctx context.Context, carClassID, car
 	return err
 }
 
+func (r *setupRunner) ensureSeasonCarClass(ctx context.Context, seasonID, carClassID uint32) error {
+	if r.dryRun {
+		return nil
+	}
+	_, err := r.cmdSvc.AssignCarClassToSeason(ctx,
+		connect.NewRequest(&commandv1.AssignCarClassToSeasonRequest{
+			SeasonId:   seasonID,
+			CarClassId: carClassID,
+		}))
+	return err
+}
+
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureTrack(
 	ctx context.Context, name string,

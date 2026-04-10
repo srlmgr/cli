@@ -17,6 +17,7 @@ type setupRunner struct {
 	qrySvc         queryClient
 	driverLookup   map[string]*commonv1.Driver
 	carModelLookup map[string]*commonv1.CarModel
+	carClassLookup map[string]*commonv1.CarClass
 }
 
 // run loads the config and provisions all entities in the required order.
@@ -235,6 +236,9 @@ func (r *setupRunner) setupSeasonList(
 		if err := r.setupEventList(ctx, snID, seasons[i].Events, layoutIDs); err != nil {
 			return fmt.Errorf("season %q events: %w", seasons[i].Name, err)
 		}
+		if err := r.setupSeasonCarClasses(ctx, snID, seasons[i].CarClasses); err != nil {
+			return fmt.Errorf("season %q car classes: %w", seasons[i].Name, err)
+		}
 
 	}
 
@@ -315,6 +319,30 @@ func (r *setupRunner) setupEventList(
 		if err := r.setupRaceList(ctx, evID, events[i].Races); err != nil {
 			return fmt.Errorf("event %q races: %w", events[i].Name, err)
 		}
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupSeasonCarClasses(
+	ctx context.Context,
+	seasonID uint32,
+	carClasses []SeasonCarClassConfig,
+) error {
+	for i := range carClasses {
+		if carClasses[i].Name == "" {
+			return fmt.Errorf("season %q car class[%d]: name is required", seasonID, i)
+		}
+		carClass := r.carClassLookup[carClasses[i].Name]
+		err := r.ensureSeasonCarClass(ctx, seasonID, carClass.GetId())
+		if err != nil {
+			return fmt.Errorf("season %q car class[%d]: %w", seasonID, i, err)
+		}
+		if err := r.printResult("season-car-class", carClasses[i].Name, carClass.GetId(), true); err != nil {
+			return err
+		}
+
 	}
 
 	return nil
@@ -444,12 +472,14 @@ func (r *setupRunner) setupCarClasses(
 	classConfigs []CarClassConfig,
 ) (map[string]uint32, error) {
 	modelIDs := make(map[string]uint32)
+	r.carClassLookup = make(map[string]*commonv1.CarClass, len(classConfigs))
 
 	for i := range classConfigs {
 		carClass, created, err := r.ensureCarClass(ctx, classConfigs[i].Name)
 		if err != nil {
 			return nil, fmt.Errorf("car class %q: %w", classConfigs[i].Name, err)
 		}
+		r.carClassLookup[classConfigs[i].Name] = carClass
 		//nolint:lll // readability
 		if err := r.printResult("car-class", classConfigs[i].Name, carClass.GetId(), created); err != nil {
 			return nil, err

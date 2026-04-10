@@ -25,6 +25,10 @@ type commandClient interface {
 		context.Context,
 		*connect.Request[commandv1.CreateSeasonRequest],
 	) (*connect.Response[commandv1.CreateSeasonResponse], error)
+	AssignCarClassToSeason(
+		context.Context,
+		*connect.Request[commandv1.AssignCarClassToSeasonRequest],
+	) (*connect.Response[commandv1.AssignCarClassToSeasonResponse], error)
 
 	CreatePointSystem(
 		context.Context,
