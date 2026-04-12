@@ -38,11 +38,11 @@ func findOrCreate[T any](
 	return id, true, nil
 }
 
+//nolint:whitespace // editor/linter issue
 func findOrCreateFull[T any](
 	ctx context.Context,
 	list func(context.Context) ([]T, error),
 	match func(T) bool,
-	getID func(T) uint32,
 	create func(context.Context) (T, error),
 	dryRun bool,
 ) (T, bool, error) {

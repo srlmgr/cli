@@ -119,7 +119,7 @@ func (r *setupRunner) ensureSeries(
 
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureSeason(
-	ctx context.Context, seriesID, psID uint32, sCfg SeasonConfig,
+	ctx context.Context, seriesID, psID uint32, sCfg *SeasonConfig,
 ) (uint32, bool, error) {
 	return findOrCreate(ctx,
 		func(ctx context.Context) ([]*commonv1.Season, error) {
@@ -251,7 +251,7 @@ func (r *setupRunner) ensureCarModel(
 		func(m *commonv1.CarModel) bool {
 			return m.GetBrandId() == brandID && m.GetName() == name
 		},
-		func(m *commonv1.CarModel) uint32 { return m.GetId() },
+
 		func(ctx context.Context) (*commonv1.CarModel, error) {
 			resp, err := r.cmdSvc.CreateCarModel(ctx,
 				connect.NewRequest(&commandv1.CreateCarModelRequest{
@@ -285,7 +285,6 @@ func (r *setupRunner) ensureCarClass(
 			return resp.Msg.GetItems(), nil
 		},
 		func(c *commonv1.CarClass) bool { return c.GetName() == name },
-		func(c *commonv1.CarClass) uint32 { return c.GetId() },
 		func(ctx context.Context) (*commonv1.CarClass, error) {
 			resp, err := r.cmdSvc.CreateCarClass(ctx,
 				connect.NewRequest(&commandv1.CreateCarClassRequest{
@@ -302,7 +301,11 @@ func (r *setupRunner) ensureCarClass(
 	)
 }
 
-func (r *setupRunner) ensureCarModelInClass(ctx context.Context, carClassID, carModelID uint32) error {
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) ensureCarModelInClass(
+	ctx context.Context,
+	carClassID, carModelID uint32,
+) error {
 	if r.dryRun {
 		return nil
 	}
@@ -314,7 +317,11 @@ func (r *setupRunner) ensureCarModelInClass(ctx context.Context, carClassID, car
 	return err
 }
 
-func (r *setupRunner) ensureSeasonCarClass(ctx context.Context, seasonID, carClassID uint32) error {
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) ensureSeasonCarClass(
+	ctx context.Context,
+	seasonID, carClassID uint32,
+) error {
 	if r.dryRun {
 		return nil
 	}
@@ -411,7 +418,6 @@ func (r *setupRunner) ensureDriver(
 			return resp.Msg.GetItems(), nil
 		},
 		func(d *commonv1.Driver) bool { return d.GetName() == cfg.Name },
-		func(d *commonv1.Driver) uint32 { return d.GetId() },
 		func(ctx context.Context) (*commonv1.Driver, error) {
 			resp, err := r.cmdSvc.CreateDriver(ctx,
 				connect.NewRequest(&commandv1.CreateDriverRequest{

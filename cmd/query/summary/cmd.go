@@ -13,6 +13,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
+
 	"github.com/srlmgr/cli/cmd/config"
 	"github.com/srlmgr/cli/cmd/query/client"
 	"github.com/srlmgr/cli/conversion"
@@ -72,6 +73,7 @@ type querySummaryCommand struct {
 	out               io.Writer
 }
 
+//nolint:funlen // much work to do
 func (c *querySummaryCommand) run(ctx context.Context) error {
 	logger := log.GetFromContext(ctx).Named("rpc")
 	svc := client.NewQueryServiceClient(c.apiBaseURL, logger)
@@ -145,13 +147,15 @@ func (c *querySummaryCommand) outputTable(
 	return w.Flush()
 }
 
-//nolint:whitespace,lll // editor/linter issue
+//nolint:whitespace // editor/linter issue
 func (c *querySummaryCommand) outputCSV(
 	summaries []*commonv1.Summary,
 	driverByID map[uint32]*commonv1.Driver,
 ) error {
 	w := csv.NewWriter(c.out)
-	if err := w.Write([]string{"id", "driver", "points", "bonus_points", "total_points"}); err != nil {
+	if err := w.Write(
+		[]string{"id", "driver", "points", "bonus_points", "total_points"},
+	); err != nil {
 		return fmt.Errorf("write csv header: %w", err)
 	}
 	for _, s := range summaries {

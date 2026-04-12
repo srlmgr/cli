@@ -1,4 +1,4 @@
-package resolve
+package auto
 
 import (
 	"context"
@@ -16,17 +16,18 @@ import (
 
 //nolint:lll // readability
 func NewCmd() *cobra.Command {
-	var gridID uint32
+	var eventID uint32
+
 	cmd := &cobra.Command{
-		Use:   "resolve",
-		Short: "Resolve driver/car mappings for an import batch",
-		Long:  "Resolve driver and car mappings via backend.import.v1.ImportService.ResolveMappings",
+		Use:   "auto",
+		Short: "create bookings based on an import batch (auto detect mode)",
+		Long:  "Create bookings via backend.import.v1.ImportService.CreateBookings",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := log.GetFromContext(cmd.Context()).Named("rpc")
 
 			runner := &resolveCommand{
-				raceGridID: gridID,
-				out:        cmd.OutOrStdout(),
+				eventID: eventID,
+				out:     cmd.OutOrStdout(),
 				importSvc: importclient.NewImportServiceClient(
 					config.APIAddr, config.APIToken, logger,
 				),
@@ -35,42 +36,42 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Uint32Var(&gridID, "grid-id", 0, "ID of the race grid to resolve mappings for")
-	if err := cmd.MarkFlagRequired("grid-id"); err != nil {
-		panic(fmt.Sprintf("failed to mark 'grid-id' flag as required: %v", err))
+	cmd.Flags().Uint32Var(&eventID, "event-id", 0, "ID of the event to create bookings for")
+	if err := cmd.MarkFlagRequired("event-id"); err != nil {
+		panic(fmt.Sprintf("failed to mark 'event-id' flag as required: %v", err))
 	}
 
 	return cmd
 }
 
 type importClient interface {
-	ResolveMappings(
+	ComputeBookingEntries(
 		context.Context,
-		*connect.Request[importv1.ResolveMappingsRequest],
-	) (*connect.Response[importv1.ResolveMappingsResponse], error)
+		*connect.Request[importv1.ComputeBookingEntriesRequest],
+	) (*connect.Response[importv1.ComputeBookingEntriesResponse], error)
 }
 
 type resolveCommand struct {
-	raceGridID uint32
-	out        io.Writer
-	importSvc  importClient
+	eventID   uint32
+	out       io.Writer
+	importSvc importClient
 }
 
 func (c *resolveCommand) run(ctx context.Context) error {
-	resp, err := c.importSvc.ResolveMappings(
+	resp, err := c.importSvc.ComputeBookingEntries(
 		ctx,
-		connect.NewRequest(&importv1.ResolveMappingsRequest{
-			RaceGridId: c.raceGridID,
+		connect.NewRequest(&importv1.ComputeBookingEntriesRequest{
+			EventId: c.eventID,
 		}),
 	)
 	if err != nil {
-		return fmt.Errorf("resolve mappings: %w", err)
+		return fmt.Errorf("compute auto booking entries: %w", err)
 	}
 
 	if _, err = fmt.Fprintf(
 		c.out,
-		"Resolved mappings: unresolved_mappings=%d\n",
-		resp.Msg.GetUnresolvedMappings(),
+		"Computed auto booking entries: created_entries=%d\n",
+		resp.Msg.GetCreatedEntries(),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)
 	}

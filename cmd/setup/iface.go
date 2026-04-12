@@ -1,4 +1,3 @@
-//nolint:dupl // by design
 package setup
 
 import (

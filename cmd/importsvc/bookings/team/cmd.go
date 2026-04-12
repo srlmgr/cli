@@ -1,4 +1,4 @@
-package driver
+package team
 
 import (
 	"context"
@@ -18,9 +18,9 @@ import (
 func NewCmd() *cobra.Command {
 	var eventID uint32
 	cmd := &cobra.Command{
-		Use:   "driver",
-		Short: "create bookings for drivers based on an import batch",
-		Long:  "Create bookings for drivers via backend.import.v1.ImportService.CreateDriverBookings",
+		Use:   "team",
+		Short: "create bookings for teams based on an import batch",
+		Long:  "Create bookings for teams via backend.import.v1.ImportService.CreateTeamBookings",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := log.GetFromContext(cmd.Context()).Named("rpc")
 
@@ -44,10 +44,10 @@ func NewCmd() *cobra.Command {
 }
 
 type importClient interface {
-	ComputeDriverBookingEntries(
+	ComputeTeamBookingEntries(
 		context.Context,
-		*connect.Request[importv1.ComputeDriverBookingEntriesRequest],
-	) (*connect.Response[importv1.ComputeDriverBookingEntriesResponse], error)
+		*connect.Request[importv1.ComputeTeamBookingEntriesRequest],
+	) (*connect.Response[importv1.ComputeTeamBookingEntriesResponse], error)
 }
 
 type resolveCommand struct {
@@ -57,19 +57,19 @@ type resolveCommand struct {
 }
 
 func (c *resolveCommand) run(ctx context.Context) error {
-	resp, err := c.importSvc.ComputeDriverBookingEntries(
+	resp, err := c.importSvc.ComputeTeamBookingEntries(
 		ctx,
-		connect.NewRequest(&importv1.ComputeDriverBookingEntriesRequest{
+		connect.NewRequest(&importv1.ComputeTeamBookingEntriesRequest{
 			EventId: c.eventID,
 		}),
 	)
 	if err != nil {
-		return fmt.Errorf("compute driver booking entries: %w", err)
+		return fmt.Errorf("compute team booking entries: %w", err)
 	}
 
 	if _, err = fmt.Fprintf(
 		c.out,
-		"Computed driver booking entries: created_entries=%d\n",
+		"Computed team booking entries: created_entries=%d\n",
 		resp.Msg.GetCreatedEntries(),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)

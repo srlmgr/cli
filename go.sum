@@ -26,6 +26,8 @@ buf.build/gen/go/srlmgr/api/connectrpc/go v1.19.1-20260410175302-3f96970b9277.2 
 buf.build/gen/go/srlmgr/api/connectrpc/go v1.19.1-20260410175302-3f96970b9277.2/go.mod h1:zTLCTmm8yJLuXuggu/8fkKEWKzG+Au0X6oL4uFYzuVg=
 buf.build/gen/go/srlmgr/api/connectrpc/go v1.19.1-20260410182853-3b7cd8d97f74.2 h1:V/dl7UjpLCyLyFItRU5KDFgI7dLVpT19e0+qci4y6pU=
 buf.build/gen/go/srlmgr/api/connectrpc/go v1.19.1-20260410182853-3b7cd8d97f74.2/go.mod h1:JNQxLl6mRuBz94zGAZkYkSlxquzJUK17qBBdLQPGZDw=
+buf.build/gen/go/srlmgr/api/connectrpc/go v1.19.1-20260411073242-bee79afff934.2 h1:G/sgVFs4bQH5ynUY9hSKAfLo2JVEOxemooV0miUARGg=
+buf.build/gen/go/srlmgr/api/connectrpc/go v1.19.1-20260411073242-bee79afff934.2/go.mod h1:pr/RgJWkMTMwvPFspEXnZcJDsU+DjfAgVHiLWgz++JE=
 buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260323143845-abbe45bbd4ff.1 h1:Jw8pe696Ta+vh0KCSq63D0/XenREBqvP03w6LhgWNUg=
 buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260323143845-abbe45bbd4ff.1/go.mod h1:pGcTCZq+h5qRGj7j6B7jEw0LSnmXf1BmRdtf9jI1rSk=
 buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260326122707-07c1d78e8628.1 h1:/uqMV9N7ACh5QFzy0+P1QUtYOrY4k8fzT2OqZ9+qXiY=
@@ -54,6 +56,8 @@ buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260410175302-3f96970b9
 buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260410175302-3f96970b9277.1/go.mod h1:pGcTCZq+h5qRGj7j6B7jEw0LSnmXf1BmRdtf9jI1rSk=
 buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260410182853-3b7cd8d97f74.1 h1:7MxKomuZ+tT+ytbUpdzoRD+/OxhE0dJcG5s2LKwbSRo=
 buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260410182853-3b7cd8d97f74.1/go.mod h1:pGcTCZq+h5qRGj7j6B7jEw0LSnmXf1BmRdtf9jI1rSk=
+buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260411073242-bee79afff934.1 h1:kEVfesglsPoT9CvY2iZz51ZGmOTEWa8KnrSTXfBXhek=
+buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260411073242-bee79afff934.1/go.mod h1:pGcTCZq+h5qRGj7j6B7jEw0LSnmXf1BmRdtf9jI1rSk=
 connectrpc.com/connect v1.19.1 h1:R5M57z05+90EfEvCY1b7hBxDVOUl45PrtXtAV2fOC14=
 connectrpc.com/connect v1.19.1/go.mod h1:tN20fjdGlewnSFeZxLKb0xwIZ6ozc3OQs2hTXy4du9w=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=

@@ -16,9 +16,9 @@ import (
 	"github.com/srlmgr/cli/log"
 )
 
+//nolint:lll // readability
 func NewCmd() *cobra.Command {
 	var gridID uint32
-	//nolint:lll // readability
 	cmd := &cobra.Command{
 		Use:   "preview",
 		Short: "Preview preprocessed results for a race",

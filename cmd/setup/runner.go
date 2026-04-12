@@ -22,7 +22,7 @@ type setupRunner struct {
 
 // run loads the config and provisions all entities in the required order.
 //
-//nolint:lll // readability
+//nolint:funlen // much work to do
 func (r *setupRunner) run(ctx context.Context) error {
 	cfg, err := loadConfig(r.filePath)
 	if err != nil {
@@ -59,7 +59,15 @@ func (r *setupRunner) run(ctx context.Context) error {
 		return fmt.Errorf("setup car classes: %w", err)
 	}
 
-	if err := r.setupAliases(ctx, cfg, simIDs, driverIDs, modelIDs, trackIDs, layoutIDs); err != nil {
+	if err = r.setupAliases(
+		ctx,
+		cfg,
+		simIDs,
+		driverIDs,
+		modelIDs,
+		trackIDs,
+		layoutIDs,
+	); err != nil {
 		return fmt.Errorf("setup aliases: %w", err)
 	}
 
@@ -221,7 +229,7 @@ func (r *setupRunner) setupSeasonList(
 	for i := range seasons {
 		psID := psIDs[seasons[i].PointSystem]
 
-		snID, created, err := r.ensureSeason(ctx, seriesID, psID, seasons[i])
+		snID, created, err := r.ensureSeason(ctx, seriesID, psID, &seasons[i])
 		if err != nil {
 			return fmt.Errorf("season %q: %w", seasons[i].Name, err)
 		}
@@ -332,14 +340,19 @@ func (r *setupRunner) setupSeasonCarClasses(
 ) error {
 	for i := range carClasses {
 		if carClasses[i].Name == "" {
-			return fmt.Errorf("season %q car class[%d]: name is required", seasonID, i)
+			return fmt.Errorf("season %d car class[%d]: name is required", seasonID, i)
 		}
 		carClass := r.carClassLookup[carClasses[i].Name]
 		err := r.ensureSeasonCarClass(ctx, seasonID, carClass.GetId())
 		if err != nil {
-			return fmt.Errorf("season %q car class[%d]: %w", seasonID, i, err)
+			return fmt.Errorf("season %d car class[%d]: %w", seasonID, i, err)
 		}
-		if err := r.printResult("season-car-class", carClasses[i].Name, carClass.GetId(), true); err != nil {
+		if err := r.printResult(
+			"season-car-class",
+			carClasses[i].Name,
+			carClass.GetId(),
+			true,
+		); err != nil {
 			return err
 		}
 
@@ -442,7 +455,7 @@ func (r *setupRunner) setupBrandList(
 	return nil
 }
 
-//nolint:whitespace // editor/linter issue
+//nolint:whitespace,lll // editor/linter issue
 func (r *setupRunner) setupModelList(
 	ctx context.Context,
 	mfrID, brandID uint32,
@@ -480,12 +493,21 @@ func (r *setupRunner) setupCarClasses(
 			return nil, fmt.Errorf("car class %q: %w", classConfigs[i].Name, err)
 		}
 		r.carClassLookup[classConfigs[i].Name] = carClass
-		//nolint:lll // readability
-		if err := r.printResult("car-class", classConfigs[i].Name, carClass.GetId(), created); err != nil {
+
+		if err := r.printResult(
+			"car-class",
+			classConfigs[i].Name,
+			carClass.GetId(),
+			created,
+		); err != nil {
 			return nil, err
 		}
 
-		if err := r.setupCarClassModelList(ctx, carClass.GetId(), classConfigs[i].Models); err != nil {
+		if err := r.setupCarClassModelList(
+			ctx,
+			carClass.GetId(),
+			classConfigs[i].Models,
+		); err != nil {
 			return nil, fmt.Errorf("car class %q models: %w", classConfigs[i].Name, err)
 		}
 	}
@@ -561,7 +583,7 @@ func (r *setupRunner) setupLayoutList(
 	return nil
 }
 
-//nolint:whitespace // editor/linter issue
+//nolint:whitespace,lll // editor/linter issue
 func (r *setupRunner) setupAliases(
 	ctx context.Context,
 	cfg *SetupConfig,
@@ -620,7 +642,7 @@ func (r *setupRunner) setupDriverAliases(
 	return nil
 }
 
-//nolint:whitespace,lll // editor/linter issue
+//nolint:whitespace,lll,funlen // editor/linter issue
 func (r *setupRunner) setupTrackLayoutAliases(
 	ctx context.Context,
 	tracks []TrackConfig,
