@@ -29,9 +29,9 @@ func (f *SimulationFormatter) FormatSimulation(
 	resp *queryv1.GetSimulationResponse,
 ) error {
 	switch strings.ToLower(format) {
-	case "json":
+	case JSONOutputFormat:
 		return f.formatSimulationJSON(w, resp)
-	case "table":
+	case TableOutputFormat:
 		return f.formatSimulationTable(w, resp)
 	default:
 		return fmt.Errorf("unsupported output format %q (supported: table, json)", format)
