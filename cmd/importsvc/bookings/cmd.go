@@ -4,8 +4,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/importsvc/bookings/auto"
-	"github.com/srlmgr/cli/cmd/importsvc/bookings/driver"
-	"github.com/srlmgr/cli/cmd/importsvc/bookings/team"
 )
 
 func NewCmd() *cobra.Command {
@@ -16,8 +14,6 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.AddCommand(auto.NewCmd())
-	cmd.AddCommand(driver.NewCmd())
-	cmd.AddCommand(team.NewCmd())
 
 	return cmd
 }

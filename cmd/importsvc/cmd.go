@@ -4,6 +4,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/importsvc/bookings"
+	"github.com/srlmgr/cli/cmd/importsvc/penalties"
 	"github.com/srlmgr/cli/cmd/importsvc/preview"
 	"github.com/srlmgr/cli/cmd/importsvc/resolve"
 	"github.com/srlmgr/cli/cmd/importsvc/upload"
@@ -20,6 +21,7 @@ func NewCmd() *cobra.Command {
 	cmd.AddCommand(resolve.NewCmd())
 	cmd.AddCommand(preview.NewCmd())
 	cmd.AddCommand(bookings.NewCmd())
+	cmd.AddCommand(penalties.NewCmd())
 
 	return cmd
 }
