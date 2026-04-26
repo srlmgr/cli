@@ -2,12 +2,48 @@ package conversion
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 )
 
-var supportedImportFormatLiterals = []string{"json", "csv"}
+var supportedImportFormatLiterals = []string{"json", "csv", "xml"}
+
+// ParseImportConfigs converts CLI values into protobuf ImportConfig entries.
+// Supported input format is `import-format` or `import-format:true|false`.
+func ParseImportConfigs(values []string) ([]*commonv1.ImportConfig, error) {
+	if len(values) == 0 {
+		return nil, nil
+	}
+
+	configs := make([]*commonv1.ImportConfig, 0, len(values))
+	for _, value := range values {
+		parts := strings.SplitN(strings.TrimSpace(value), ":", 2)
+		format, err := ParseImportFormat(parts[0])
+		if err != nil {
+			return nil, err
+		}
+
+		allowMultipleUploads := false
+		if len(parts) == 2 {
+			allowMultipleUploads, err = strconv.ParseBool(strings.TrimSpace(parts[1]))
+			if err != nil {
+				return nil, fmt.Errorf(
+					"invalid import config %q: expected format or format:true|false",
+					value,
+				)
+			}
+		}
+
+		configs = append(configs, &commonv1.ImportConfig{
+			Format:               format,
+			AllowMultipleUploads: allowMultipleUploads,
+		})
+	}
+
+	return configs, nil
+}
 
 // ParseImportFormats converts string literals from CLI input into protobuf enum values.
 func ParseImportFormats(values []string) ([]commonv1.ImportFormat, error) {
@@ -69,12 +105,32 @@ func JoinImportFormats(values []commonv1.ImportFormat) string {
 	return strings.Join(literals, ", ")
 }
 
+// JoinImportConfigs renders protobuf import config entries in user-facing format.
+func JoinImportConfigs(values []*commonv1.ImportConfig) string {
+	if len(values) == 0 {
+		return ""
+	}
+
+	items := make([]string, 0, len(values))
+	for _, value := range values {
+		items = append(items, fmt.Sprintf(
+			"%s(multi=%t)",
+			importFormatLiteral(value.GetFormat()),
+			value.GetAllowMultipleUploads(),
+		))
+	}
+
+	return strings.Join(items, ", ")
+}
+
 func importFormatLiteral(value commonv1.ImportFormat) string {
 	switch value {
 	case commonv1.ImportFormat_IMPORT_FORMAT_JSON:
 		return "json"
 	case commonv1.ImportFormat_IMPORT_FORMAT_CSV:
 		return "csv"
+	case commonv1.ImportFormat_IMPORT_FORMAT_XML:
+		return "xml"
 	case commonv1.ImportFormat_IMPORT_FORMAT_UNSPECIFIED:
 		return "unspecified"
 	default:

@@ -41,9 +41,16 @@ type DriverConfig struct {
 
 // SimulationConfig defines a simulation and its child series.
 type SimulationConfig struct {
-	Name     string         `yaml:"name"`
-	IsActive bool           `yaml:"isActive"`
-	Series   []SeriesConfig `yaml:"series"`
+	Name             string                            `yaml:"name"`
+	IsActive         bool                              `yaml:"isActive"`
+	SupportedFormats []SimulationSupportedFormatConfig `yaml:"supportedFormats"`
+	Series           []SeriesConfig                    `yaml:"series"`
+}
+
+// SimulationSupportedFormatConfig defines one supported import format for a simulation.
+type SimulationSupportedFormatConfig struct {
+	Format               string `yaml:"format"`
+	AllowMultipleUploads bool   `yaml:"allowMultipleUploads"`
 }
 
 // SeriesConfig defines a series and its child seasons.
@@ -234,6 +241,10 @@ func validateSimulations(items []SimulationConfig) error {
 	for i := range items {
 		if items[i].Name == "" {
 			return fmt.Errorf("simulations[%d]: name is required", i)
+		}
+
+		if _, err := parseImportConfigsFromSetup(items[i].SupportedFormats); err != nil {
+			return fmt.Errorf("simulations[%d].supportedFormats: %w", i, err)
 		}
 
 		if err := validateSeriesList(i, items[i].Series); err != nil {

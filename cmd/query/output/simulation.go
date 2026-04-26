@@ -94,6 +94,13 @@ func (f *SimulationFormatter) formatSimulationTable(
 	if _, err := fmt.Fprintf(w, "Active: %t\n", sim.GetIsActive()); err != nil {
 		return fmt.Errorf("write output: %w", err)
 	}
+	if _, err := fmt.Fprintf(
+		w,
+		"Supported Formats: %s\n",
+		conversion.JoinImportConfigs(sim.GetSupportedFormats()),
+	); err != nil {
+		return fmt.Errorf("write output: %w", err)
+	}
 
 	return nil
 }
@@ -140,7 +147,7 @@ func (f *SimulationFormatter) formatSimulationsTable(
 			sim.GetId(),
 			sim.GetName(),
 			sim.GetIsActive(),
-			conversion.JoinImportFormats(sim.GetSupportedFormats()),
+			conversion.JoinImportConfigs(sim.GetSupportedFormats()),
 		); err != nil {
 			return fmt.Errorf("write row: %w", err)
 		}

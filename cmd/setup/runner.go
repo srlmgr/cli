@@ -136,7 +136,21 @@ func (r *setupRunner) setupSimulationsBase(
 	simIDs := make(map[string]uint32, len(sims))
 
 	for i := range sims {
-		simID, created, err := r.ensureSimulation(ctx, sims[i].Name, sims[i].IsActive)
+		supportedFormats, err := parseImportConfigsFromSetup(sims[i].SupportedFormats)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"simulation %q supported formats: %w",
+				sims[i].Name,
+				err,
+			)
+		}
+
+		simID, created, err := r.ensureSimulation(
+			ctx,
+			sims[i].Name,
+			sims[i].IsActive,
+			supportedFormats,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("simulation %q: %w", sims[i].Name, err)
 		}
@@ -162,7 +176,21 @@ func (r *setupRunner) setupSimulations(
 	simIDs := make(map[string]uint32, len(sims))
 
 	for i := range sims {
-		simID, created, err := r.ensureSimulation(ctx, sims[i].Name, sims[i].IsActive)
+		supportedFormats, err := parseImportConfigsFromSetup(sims[i].SupportedFormats)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"simulation %q supported formats: %w",
+				sims[i].Name,
+				err,
+			)
+		}
+
+		simID, created, err := r.ensureSimulation(
+			ctx,
+			sims[i].Name,
+			sims[i].IsActive,
+			supportedFormats,
+		)
 		if err != nil {
 			return nil, fmt.Errorf("simulation %q: %w", sims[i].Name, err)
 		}

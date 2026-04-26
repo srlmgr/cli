@@ -49,7 +49,10 @@ func (r *setupRunner) ensurePointSystem(
 
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureSimulation(
-	ctx context.Context, name string, isActive bool,
+	ctx context.Context,
+	name string,
+	isActive bool,
+	supportedFormats []*commonv1.ImportConfig,
 ) (uint32, bool, error) {
 	return findOrCreate(ctx,
 		func(ctx context.Context) ([]*commonv1.Simulation, error) {
@@ -67,8 +70,9 @@ func (r *setupRunner) ensureSimulation(
 		func(ctx context.Context) (uint32, error) {
 			resp, err := r.cmdSvc.CreateSimulation(ctx,
 				connect.NewRequest(&commandv1.CreateSimulationRequest{
-					Name:     name,
-					IsActive: isActive,
+					Name:             name,
+					IsActive:         isActive,
+					SupportedFormats: supportedFormats,
 				}),
 			)
 			if err != nil {

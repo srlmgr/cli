@@ -39,7 +39,7 @@ func NewCreateCmd() *cobra.Command {
 		panic(err)
 	}
 	cmd.Flags().StringSliceVar(&supportedFormats, "supported-formats",
-		nil, "Supported formats for the simulation")
+		nil, "Supported formats as format or format:true|false (e.g. json:true,csv:false)")
 
 	return cmd
 }
@@ -54,7 +54,7 @@ func (c *createSimulationCommand) run(ctx context.Context) error {
 	logger := log.GetFromContext(ctx).Named("rpc")
 	cl := client.NewCommandServiceClient(config.APIAddr, config.APIToken, logger)
 
-	supportedFormats, err := conversion.ParseImportFormats(c.supportedFormats)
+	supportedFormats, err := conversion.ParseImportConfigs(c.supportedFormats)
 	if err != nil {
 		return fmt.Errorf("parse supported formats: %w", err)
 	}
@@ -77,7 +77,7 @@ func (c *createSimulationCommand) run(ctx context.Context) error {
 		sim.GetId(),
 		sim.GetName(),
 		sim.GetIsActive(),
-		conversion.JoinImportFormats(sim.GetSupportedFormats()),
+		conversion.JoinImportConfigs(sim.GetSupportedFormats()),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)
 	}

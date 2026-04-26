@@ -11,6 +11,7 @@ import (
 
 	"github.com/srlmgr/cli/cmd/command/client"
 	"github.com/srlmgr/cli/cmd/config"
+	"github.com/srlmgr/cli/conversion"
 	"github.com/srlmgr/cli/log"
 )
 
@@ -18,6 +19,7 @@ import (
 func NewUpdateCmd() *cobra.Command {
 	var simulationID uint32
 	var name string
+	var supportedFormats []string
 
 	cmd := &cobra.Command{
 		Use:   "update",
@@ -25,9 +27,10 @@ func NewUpdateCmd() *cobra.Command {
 		Long:  "Update an existing simulation via backend.command.v1.CommandService.UpdateSimulation",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			runner := &updateSimulationCommand{
-				simulationID: simulationID,
-				name:         name,
-				out:          cmd.OutOrStdout(),
+				simulationID:     simulationID,
+				name:             name,
+				supportedFormats: supportedFormats,
+				out:              cmd.OutOrStdout(),
 			}
 			return runner.run(cmd.Context())
 		},
@@ -38,25 +41,34 @@ func NewUpdateCmd() *cobra.Command {
 		panic(err)
 	}
 	cmd.Flags().StringVar(&name, "name", "", "New name for the simulation")
+	cmd.Flags().StringSliceVar(&supportedFormats, "supported-formats",
+		nil, "Supported formats as format or format:true|false (e.g. json:true,csv:false)")
 
 	return cmd
 }
 
 type updateSimulationCommand struct {
-	simulationID uint32
-	name         string
-	out          io.Writer
+	simulationID     uint32
+	name             string
+	supportedFormats []string
+	out              io.Writer
 }
 
 func (c *updateSimulationCommand) run(ctx context.Context) error {
 	logger := log.GetFromContext(ctx).Named("rpc")
 	cl := client.NewCommandServiceClient(config.APIAddr, config.APIToken, logger)
 
+	supportedFormats, err := conversion.ParseImportConfigs(c.supportedFormats)
+	if err != nil {
+		return fmt.Errorf("parse supported formats: %w", err)
+	}
+
 	resp, err := cl.UpdateSimulation(
 		ctx,
 		connect.NewRequest(&commandv1.UpdateSimulationRequest{
-			SimulationId: c.simulationID,
-			Name:         c.name,
+			SimulationId:     c.simulationID,
+			Name:             c.name,
+			SupportedFormats: supportedFormats,
 		}),
 	)
 	if err != nil {
@@ -64,10 +76,13 @@ func (c *updateSimulationCommand) run(ctx context.Context) error {
 	}
 
 	sim := resp.Msg.GetSimulation()
-	if _, err = fmt.Fprintf(c.out, "Updated simulation: id=%d name=%s active=%t\n",
+	if _, err = fmt.Fprintf(
+		c.out,
+		"Updated simulation: id=%d name=%s active=%t supported_formats=%s\n",
 		sim.GetId(),
 		sim.GetName(),
 		sim.GetIsActive(),
+		conversion.JoinImportConfigs(sim.GetSupportedFormats()),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)
 	}
