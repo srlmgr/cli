@@ -21,7 +21,35 @@ type SetupConfig struct {
 
 // PointSystemConfig defines a point system to be created.
 type PointSystemConfig struct {
-	Name string `yaml:"name"`
+	Name         string                    `yaml:"name"`
+	Description  string                    `yaml:"description"`
+	Eligible     PointEligibilityConfig    `yaml:"eligible"`
+	RaceSettings []PointRaceSettingsConfig `yaml:"raceSettings"`
+}
+
+// PointEligibilityConfig defines point eligibility filters.
+type PointEligibilityConfig struct {
+	Guests      bool    `yaml:"guests"`
+	RaceDistPct float64 `yaml:"raceDistPct"`
+}
+
+// PointRaceSettingsConfig defines points configuration for one race setup.
+type PointRaceSettingsConfig struct {
+	Name     string                      `yaml:"name"`
+	Policies []PointPolicySettingsConfig `yaml:"policies"`
+}
+
+// PointPolicySettingsConfig defines one point policy and its configuration.
+type PointPolicySettingsConfig struct {
+	Name     string                       `yaml:"name"`
+	Points   [][]int32                    `yaml:"points"`
+	Settings []ThresholdPenaltyRuleConfig `yaml:"settings"`
+}
+
+// ThresholdPenaltyRuleConfig defines threshold-based penalty settings.
+type ThresholdPenaltyRuleConfig struct {
+	Threshold      uint32  `yaml:"threshold"`
+	PenaltyPercent float64 `yaml:"penaltyPercent"`
 }
 
 // EntitySimulationConfig holds a simulation reference
@@ -220,6 +248,30 @@ func validatePointSystems(items []PointSystemConfig) error {
 	for i, ps := range items {
 		if ps.Name == "" {
 			return fmt.Errorf("pointSystems[%d]: name is required", i)
+		}
+
+		for j := range ps.RaceSettings {
+			for k := range ps.RaceSettings[j].Policies {
+				policy := ps.RaceSettings[j].Policies[k]
+				if policy.Name == "" {
+					return fmt.Errorf(
+						"pointSystems[%d].raceSettings[%d].policies[%d]: name is required",
+						i,
+						j,
+						k,
+					)
+				}
+
+				if _, ok := commonv1.PointPolicy_value[policy.Name]; !ok {
+					return fmt.Errorf(
+						"pointSystems[%d].raceSettings[%d].policies[%d]: unknown policy %q",
+						i,
+						j,
+						k,
+						policy.Name,
+					)
+				}
+			}
 		}
 	}
 

@@ -113,7 +113,7 @@ func (r *setupRunner) setupPointSystems(
 	ids := make(map[string]uint32, len(items))
 
 	for _, ps := range items {
-		id, created, err := r.ensurePointSystem(ctx, ps.Name)
+		id, created, err := r.ensurePointSystem(ctx, ps)
 		if err != nil {
 			return nil, fmt.Errorf("point system %q: %w", ps.Name, err)
 		}

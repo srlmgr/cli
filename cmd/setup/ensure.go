@@ -16,8 +16,13 @@ import (
 
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensurePointSystem(
-	ctx context.Context, name string,
+	ctx context.Context, cfg PointSystemConfig,
 ) (uint32, bool, error) {
+	req, err := buildCreatePointSystemRequest(cfg)
+	if err != nil {
+		return 0, false, fmt.Errorf("build point system request: %w", err)
+	}
+
 	return findOrCreate(ctx,
 		func(ctx context.Context) ([]*commonv1.PointSystem, error) {
 			resp, err := r.qrySvc.ListPointSystems(ctx,
@@ -29,13 +34,11 @@ func (r *setupRunner) ensurePointSystem(
 
 			return resp.Msg.GetItems(), nil
 		},
-		func(p *commonv1.PointSystem) bool { return p.GetName() == name },
+		func(p *commonv1.PointSystem) bool { return p.GetName() == cfg.Name },
 		func(p *commonv1.PointSystem) uint32 { return p.GetId() },
 		func(ctx context.Context) (uint32, error) {
 			resp, err := r.cmdSvc.CreatePointSystem(ctx,
-				connect.NewRequest(&commandv1.CreatePointSystemRequest{
-					Name: name,
-				}),
+				connect.NewRequest(req),
 			)
 			if err != nil {
 				return 0, fmt.Errorf("create point system: %w", err)
