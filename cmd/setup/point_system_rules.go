@@ -7,6 +7,7 @@ import (
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 )
 
+//nolint:whitespace // editor/linter issue
 func buildCreatePointSystemRequest(
 	cfg PointSystemConfig,
 ) (*commandv1.CreatePointSystemRequest, error) {
@@ -23,6 +24,7 @@ func buildCreatePointSystemRequest(
 	}, nil
 }
 
+//nolint:whitespace // editor/linter issue
 func buildPointSystemMessages(
 	cfg PointSystemConfig,
 ) (*commonv1.PointEligibility, []*commonv1.PointRaceSettings, error) {
@@ -59,6 +61,7 @@ func buildPointSystemMessages(
 	return eligibility, raceSettings, nil
 }
 
+//nolint:whitespace // editor/linter issue
 func buildPointPolicySettings(
 	policyCfg PointPolicySettingsConfig,
 ) (*commonv1.PointPolicySettings, error) {
@@ -70,20 +73,32 @@ func buildPointPolicySettings(
 	policy := &commonv1.PointPolicySettings{
 		Name: commonv1.PointPolicy(policyNum),
 	}
-
+	//nolint:exhaustive // by design
 	switch policy.GetName() {
 	case commonv1.PointPolicy_POINT_POLICY_FINISH_POS:
-		policy.Config = &commonv1.PointPolicySettings_FinishPos{FinishPos: buildPositionPointsConfig(policyCfg.Points)}
+		policy.Config = &commonv1.PointPolicySettings_FinishPos{
+			FinishPos: buildPositionPointsConfig(policyCfg.Points),
+		}
 	case commonv1.PointPolicy_POINT_POLICY_QUALIFICATION_POS:
-		policy.Config = &commonv1.PointPolicySettings_QualificationPos{QualificationPos: buildPositionPointsConfig(policyCfg.Points)}
+		policy.Config = &commonv1.PointPolicySettings_QualificationPos{
+			QualificationPos: buildPositionPointsConfig(policyCfg.Points),
+		}
 	case commonv1.PointPolicy_POINT_POLICY_LEAST_INCIDENTS:
-		policy.Config = &commonv1.PointPolicySettings_LeastIncidents{LeastIncidents: buildPositionPointsConfig(policyCfg.Points)}
+		policy.Config = &commonv1.PointPolicySettings_LeastIncidents{
+			LeastIncidents: buildPositionPointsConfig(policyCfg.Points),
+		}
 	case commonv1.PointPolicy_POINT_POLICY_FASTEST_LAP:
-		policy.Config = &commonv1.PointPolicySettings_FastestLap{FastestLap: buildPositionPointsConfig(policyCfg.Points)}
+		policy.Config = &commonv1.PointPolicySettings_FastestLap{
+			FastestLap: buildPositionPointsConfig(policyCfg.Points),
+		}
 	case commonv1.PointPolicy_POINT_POLICY_TOP_N_FINISHER:
-		policy.Config = &commonv1.PointPolicySettings_TopNFinisher{TopNFinisher: buildPositionPointsConfig(policyCfg.Points)}
+		policy.Config = &commonv1.PointPolicySettings_TopNFinisher{
+			TopNFinisher: buildPositionPointsConfig(policyCfg.Points),
+		}
 	case commonv1.PointPolicy_POINT_POLICY_INCIDENTS_EXCEEDED:
-		policy.Config = &commonv1.PointPolicySettings_IncidentsExceeded{IncidentsExceeded: buildThresholdPenaltyConfig(policyCfg.Settings)}
+		policy.Config = &commonv1.PointPolicySettings_IncidentsExceeded{
+			IncidentsExceeded: buildThresholdPenaltyConfig(policyCfg.Settings),
+		}
 	}
 
 	return policy, nil
@@ -99,6 +114,7 @@ func buildPositionPointsConfig(points [][]int32) *commonv1.PositionPointsConfig 
 	return &commonv1.PositionPointsConfig{Tables: tables}
 }
 
+//nolint:whitespace // editor/linter issue
 func buildThresholdPenaltyConfig(
 	settings []ThresholdPenaltyRuleConfig,
 ) *commonv1.ThresholdPenaltyConfig {

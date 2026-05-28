@@ -65,12 +65,12 @@ func NewCmd() *cobra.Command {
 	cmd.Flags().Uint32Var(&eventID, "event-id", 0, "ID of the event to apply penalty to")
 	cmd.Flags().Uint32Var(&raceID, "race-id", 0, "ID of the race to apply penalty to")
 	cmd.Flags().Uint32Var(&gridID, "grid-id", 0, "ID of the race grid to apply penalty to")
-	cmd.Flags().BoolVar(&includeManualEdits, "include-manuals", false, "Include manual edits in the cleanup")
+	cmd.Flags().
+		BoolVar(&includeManualEdits, "include-manuals", false, "Include manual edits in the cleanup")
 	cmd.Flags().BoolVar(&recomputeResults, "recompute", false, "Recompute results after cleanup")
 	return cmd
 }
 
-//nolint:funlen,lll // many parameters
 func (c *cleanupCommand) run(ctx context.Context) error {
 	// Validate target flags (exactly one must be set)
 	targetFlags := 0

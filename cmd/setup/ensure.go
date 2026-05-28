@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strconv"
 	"time"
 
 	commandv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/command/v1"
@@ -650,6 +651,33 @@ func (r *setupRunner) setTeamMembers(
 	)
 	if err != nil {
 		return fmt.Errorf("set team members: %w", err)
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) addSeasonDriver(
+	ctx context.Context,
+	seasonID, driverID, carModelID uint32,
+	carNumber string,
+	joinedAt time.Time,
+) error {
+	if r.dryRun {
+		return nil
+	}
+
+	_, err := r.cmdSvc.AddSeasonDriver(ctx,
+		connect.NewRequest(&commandv1.AddSeasonDriverRequest{
+			DriverId:   driverID,
+			SeasonId:   seasonID,
+			CarModelId: strconv.FormatUint(uint64(carModelID), 10),
+			CarNumber:  carNumber,
+			JoinedAt:   timestamppb.New(joinedAt),
+		}),
+	)
+	if err != nil {
+		return fmt.Errorf("add season driver: %w", err)
 	}
 
 	return nil

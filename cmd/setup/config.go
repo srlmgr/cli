@@ -89,21 +89,31 @@ type SeriesConfig struct {
 
 // SeasonConfig defines a season and its associated point system name.
 type SeasonConfig struct {
-	Name           string                 `yaml:"name"`
-	PointSystem    string                 `yaml:"pointSystem"`
-	HasTeams       bool                   `yaml:"hasTeams"`
-	Multiclass     bool                   `yaml:"multiclass"`
-	TeamBased      bool                   `yaml:"teamBased"`
-	TeamPointsTopN int32                  `yaml:"teamPointsTopN"`
-	SkipEvents     int32                  `yaml:"skipEvents"`
-	Events         []EventConfig          `yaml:"events"`
-	Teams          []TeamConfig           `yaml:"teams"`
-	CarClasses     []SeasonCarClassConfig `yaml:"carClasses"`
+	Name            string                 `yaml:"name"`
+	PointSystem     string                 `yaml:"pointSystem"`
+	HasTeams        bool                   `yaml:"hasTeams"`
+	Multiclass      bool                   `yaml:"multiclass"`
+	TeamBased       bool                   `yaml:"teamBased"`
+	TeamPointsTopN  int32                  `yaml:"teamPointsTopN"`
+	SkipEvents      int32                  `yaml:"skipEvents"`
+	DefaultCarModel string                 `yaml:"defaultCarModel"`
+	DefaultJoinedAt string                 `yaml:"defaultJoinedAt"`
+	Drivers         []SeasonDriverConfig   `yaml:"drivers"`
+	Events          []EventConfig          `yaml:"events"`
+	Teams           []TeamConfig           `yaml:"teams"`
+	CarClasses      []SeasonCarClassConfig `yaml:"carClasses"`
 }
 
 // SeasonCarClassConfig defines a car class under a season.
 type SeasonCarClassConfig struct {
 	Name string `yaml:"name"`
+}
+type SeasonDriverConfig struct {
+	Name      string `yaml:"name"`
+	CarModel  string `yaml:"carModel"`
+	CarNumber string `yaml:"carNumber"`
+	JoinedAt  string `yaml:"joinedAt"`
+	LeftAt    string `yaml:"leftAt"`
 }
 
 // TeamConfig defines a team under a season.
@@ -245,7 +255,8 @@ func (c *SetupConfig) validate() error {
 }
 
 func validatePointSystems(items []PointSystemConfig) error {
-	for i, ps := range items {
+	for i := range items {
+		ps := items[i]
 		if ps.Name == "" {
 			return fmt.Errorf("pointSystems[%d]: name is required", i)
 		}
@@ -324,6 +335,7 @@ func validateSeriesList(simIdx int, series []SeriesConfig) error {
 	return nil
 }
 
+//nolint:lll // readability
 func validateSeasonList(simIdx, serIdx int, seasons []SeasonConfig) error {
 	for k := range seasons {
 		if seasons[k].Name == "" {
@@ -333,8 +345,67 @@ func validateSeasonList(simIdx, serIdx int, seasons []SeasonConfig) error {
 			)
 		}
 
+		if seasons[k].DefaultJoinedAt != "" {
+			if _, err := time.Parse(time.DateOnly, seasons[k].DefaultJoinedAt); err != nil {
+				return fmt.Errorf(
+					"simulations[%d].series[%d].seasons[%d]: invalid defaultJoinedAt %q (expected YYYY-MM-DD)",
+					simIdx,
+					serIdx,
+					k,
+					seasons[k].DefaultJoinedAt,
+				)
+			}
+		}
+
+		if err := validateSeasonDrivers(simIdx, serIdx, k, seasons[k].Drivers); err != nil {
+			return err
+		}
+
 		if err := validateEvents(simIdx, serIdx, k, seasons[k].Events); err != nil {
 			return err
+		}
+	}
+
+	return nil
+}
+
+//nolint:whitespace,lll // editor/linter issue
+func validateSeasonDrivers(
+	simIdx, serIdx, snIdx int,
+	drivers []SeasonDriverConfig,
+) error {
+	for i := range drivers {
+		if drivers[i].Name == "" {
+			return fmt.Errorf(
+				"simulations[%d].series[%d].seasons[%d].drivers[%d]: name is required",
+				simIdx,
+				serIdx,
+				snIdx,
+				i,
+			)
+		}
+
+		if drivers[i].CarNumber == "" {
+			return fmt.Errorf(
+				"simulations[%d].series[%d].seasons[%d].drivers[%d]: carNumber is required",
+				simIdx,
+				serIdx,
+				snIdx,
+				i,
+			)
+		}
+
+		if drivers[i].JoinedAt != "" {
+			if _, err := time.Parse(time.DateOnly, drivers[i].JoinedAt); err != nil {
+				return fmt.Errorf(
+					"simulations[%d].series[%d].seasons[%d].drivers[%d]: invalid joinedAt %q (expected YYYY-MM-DD)",
+					simIdx,
+					serIdx,
+					snIdx,
+					i,
+					drivers[i].JoinedAt,
+				)
+			}
 		}
 	}
 

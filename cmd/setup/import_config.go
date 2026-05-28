@@ -9,6 +9,7 @@ import (
 	"github.com/srlmgr/cli/conversion"
 )
 
+//nolint:whitespace // editor/linter issue
 func parseImportConfigsFromSetup(
 	values []SimulationSupportedFormatConfig,
 ) ([]*commonv1.ImportConfig, error) {

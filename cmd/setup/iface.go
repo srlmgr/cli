@@ -75,6 +75,10 @@ type commandClient interface {
 		context.Context,
 		*connect.Request[commandv1.CreateTeamRequest],
 	) (*connect.Response[commandv1.CreateTeamResponse], error)
+	AddSeasonDriver(
+		context.Context,
+		*connect.Request[commandv1.AddSeasonDriverRequest],
+	) (*connect.Response[commandv1.AddSeasonDriverResponse], error)
 
 	CreateEvent(
 		context.Context,

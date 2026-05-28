@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"time"
 
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 )
@@ -112,7 +113,8 @@ func (r *setupRunner) setupPointSystems(
 ) (map[string]uint32, error) {
 	ids := make(map[string]uint32, len(items))
 
-	for _, ps := range items {
+	for i := range items {
+		ps := items[i]
 		id, created, err := r.ensurePointSystem(ctx, ps)
 		if err != nil {
 			return nil, fmt.Errorf("point system %q: %w", ps.Name, err)
@@ -266,6 +268,17 @@ func (r *setupRunner) setupSeasonList(
 			return err
 		}
 
+		if err := r.setupSeasonDrivers(
+			ctx,
+			snID,
+			seasons[i].Name,
+			seasons[i].Drivers,
+			seasons[i].DefaultCarModel,
+			seasons[i].DefaultJoinedAt,
+		); err != nil {
+			return fmt.Errorf("season %q drivers: %w", seasons[i].Name, err)
+		}
+
 		if err := r.setupTeamList(ctx, snID, seasons[i].Teams); err != nil {
 			return fmt.Errorf("season %q teams: %w", seasons[i].Name, err)
 		}
@@ -276,6 +289,100 @@ func (r *setupRunner) setupSeasonList(
 			return fmt.Errorf("season %q car classes: %w", seasons[i].Name, err)
 		}
 
+	}
+
+	return nil
+}
+
+//nolint:whitespace,funlen // editor/linter issue
+func (r *setupRunner) setupSeasonDrivers(
+	ctx context.Context,
+	seasonID uint32,
+	seasonName string,
+	drivers []SeasonDriverConfig,
+	defaultCarModel string,
+	defaultJoinedAt string,
+) error {
+	for i := range drivers {
+		driverCfg := drivers[i]
+		if driverCfg.Name == "" {
+			return fmt.Errorf("season %q drivers[%d]: name is required", seasonName, i)
+		}
+		if driverCfg.CarNumber == "" {
+			return fmt.Errorf("season %q drivers[%d]: carNumber is required", seasonName, i)
+		}
+
+		driver, ok := r.driverLookup[driverCfg.Name]
+		if !ok {
+			return fmt.Errorf(
+				"season %q drivers[%d]: driver %q not found",
+				seasonName,
+				i,
+				driverCfg.Name,
+			)
+		}
+
+		carModelName := driverCfg.CarModel
+		if carModelName == "" {
+			carModelName = defaultCarModel
+		}
+		if carModelName == "" {
+			return fmt.Errorf(
+				"season %q drivers[%d]: carModel is required when defaultCarModel is empty",
+				seasonName,
+				i,
+			)
+		}
+
+		carModel, ok := r.carModelLookup[carModelName]
+		if !ok {
+			return fmt.Errorf(
+				"season %q drivers[%d]: car model %q not found",
+				seasonName,
+				i,
+				carModelName,
+			)
+		}
+
+		joinedAtRaw := driverCfg.JoinedAt
+		if joinedAtRaw == "" {
+			joinedAtRaw = defaultJoinedAt
+		}
+		if joinedAtRaw == "" {
+			joinedAtRaw = time.Now().Format(time.DateOnly)
+		}
+
+		joinedAt, err := time.Parse(time.DateOnly, joinedAtRaw)
+		if err != nil {
+			return fmt.Errorf(
+				"season %q drivers[%d]: invalid joinedAt %q (expected YYYY-MM-DD): %w",
+				seasonName,
+				i,
+				joinedAtRaw,
+				err,
+			)
+		}
+
+		if err := r.addSeasonDriver(
+			ctx,
+			seasonID,
+			driver.GetId(),
+			carModel.GetId(),
+			driverCfg.CarNumber,
+			joinedAt,
+		); err != nil {
+			return fmt.Errorf("season %q drivers[%d]: %w", seasonName, i, err)
+		}
+
+		if err := r.printSeasonDriverResult(
+			seasonName,
+			driverCfg.Name,
+			driverCfg.CarNumber,
+			carModelName,
+			joinedAtRaw,
+		); err != nil {
+			return err
+		}
 	}
 
 	return nil
@@ -808,6 +915,37 @@ func (r *setupRunner) printAliasResult(entityType, name, simName string) error {
 	_, err := fmt.Fprintf(
 		r.out, "set %s %q aliases for simulation %q\n",
 		entityType, name, simName,
+	)
+
+	return err
+}
+
+//nolint:whitespace,lll // editor/linter issue
+func (r *setupRunner) printSeasonDriverResult(
+	seasonName, driverName, carNumber, carModelName, joinedAt string,
+) error {
+	if r.dryRun {
+		_, err := fmt.Fprintf(
+			r.out,
+			"dry-run: would add season-driver season=%q driver=%q carNumber=%q carModel=%q joinedAt=%q\n",
+			seasonName,
+			driverName,
+			carNumber,
+			carModelName,
+			joinedAt,
+		)
+
+		return err
+	}
+
+	_, err := fmt.Fprintf(
+		r.out,
+		"added season-driver season=%q driver=%q carNumber=%q carModel=%q joinedAt=%q\n",
+		seasonName,
+		driverName,
+		carNumber,
+		carModelName,
+		joinedAt,
 	)
 
 	return err
