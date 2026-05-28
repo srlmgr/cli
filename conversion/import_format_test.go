@@ -30,7 +30,7 @@ func TestParseImportFormats(t *testing.T) {
 func TestParseImportFormat_Unknown(t *testing.T) {
 	t.Parallel()
 
-	_, err := ParseImportFormat("xml")
+	_, err := ParseImportFormat("not_a_format")
 	if err == nil {
 		t.Fatal("ParseImportFormat should return an error for unknown formats")
 	}
