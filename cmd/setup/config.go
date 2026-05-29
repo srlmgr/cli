@@ -91,6 +91,8 @@ type SeriesConfig struct {
 type SeasonConfig struct {
 	Name            string                 `yaml:"name"`
 	PointSystem     string                 `yaml:"pointSystem"`
+	StartsAt        string                 `yaml:"startsAt"`
+	EndsAt          string                 `yaml:"endsAt"`
 	HasTeams        bool                   `yaml:"hasTeams"`
 	Multiclass      bool                   `yaml:"multiclass"`
 	TeamBased       bool                   `yaml:"teamBased"`
@@ -335,7 +337,7 @@ func validateSeriesList(simIdx int, series []SeriesConfig) error {
 	return nil
 }
 
-//nolint:lll // readability
+//nolint:lll,funlen // readability
 func validateSeasonList(simIdx, serIdx int, seasons []SeasonConfig) error {
 	for k := range seasons {
 		if seasons[k].Name == "" {
@@ -345,20 +347,41 @@ func validateSeasonList(simIdx, serIdx int, seasons []SeasonConfig) error {
 			)
 		}
 
-		if seasons[k].DefaultJoinedAt != "" {
-			if _, err := time.Parse(time.DateOnly, seasons[k].DefaultJoinedAt); err != nil {
+		var startsAt time.Time
+		if seasons[k].StartsAt != "" {
+			var parseErr error
+			startsAt, parseErr = parseSeasonTimestamp(seasons[k].StartsAt)
+			if parseErr != nil {
 				return fmt.Errorf(
-					"simulations[%d].series[%d].seasons[%d]: invalid defaultJoinedAt %q (expected YYYY-MM-DD)",
+					"simulations[%d].series[%d].seasons[%d]: %w",
 					simIdx,
 					serIdx,
 					k,
-					seasons[k].DefaultJoinedAt,
+					parseErr,
 				)
 			}
 		}
 
-		if err := validateSeasonDrivers(simIdx, serIdx, k, seasons[k].Drivers); err != nil {
-			return err
+		if seasons[k].EndsAt != "" {
+			endsAt, parseErr := parseSeasonTimestamp(seasons[k].EndsAt)
+			if parseErr != nil {
+				return fmt.Errorf(
+					"simulations[%d].series[%d].seasons[%d].ends_at: %w",
+					simIdx,
+					serIdx,
+					k,
+					parseErr,
+				)
+			}
+
+			if !startsAt.IsZero() && endsAt.Before(startsAt) {
+				return fmt.Errorf(
+					"simulations[%d].series[%d].seasons[%d]: endsAt must be greater than or equal to startsAt",
+					simIdx,
+					serIdx,
+					k,
+				)
+			}
 		}
 
 		if err := validateEvents(simIdx, serIdx, k, seasons[k].Events); err != nil {
@@ -369,47 +392,20 @@ func validateSeasonList(simIdx, serIdx int, seasons []SeasonConfig) error {
 	return nil
 }
 
-//nolint:whitespace,lll // editor/linter issue
-func validateSeasonDrivers(
-	simIdx, serIdx, snIdx int,
-	drivers []SeasonDriverConfig,
-) error {
-	for i := range drivers {
-		if drivers[i].Name == "" {
-			return fmt.Errorf(
-				"simulations[%d].series[%d].seasons[%d].drivers[%d]: name is required",
-				simIdx,
-				serIdx,
-				snIdx,
-				i,
-			)
-		}
-
-		if drivers[i].CarNumber == "" {
-			return fmt.Errorf(
-				"simulations[%d].series[%d].seasons[%d].drivers[%d]: carNumber is required",
-				simIdx,
-				serIdx,
-				snIdx,
-				i,
-			)
-		}
-
-		if drivers[i].JoinedAt != "" {
-			if _, err := time.Parse(time.DateOnly, drivers[i].JoinedAt); err != nil {
-				return fmt.Errorf(
-					"simulations[%d].series[%d].seasons[%d].drivers[%d]: invalid joinedAt %q (expected YYYY-MM-DD)",
-					simIdx,
-					serIdx,
-					snIdx,
-					i,
-					drivers[i].JoinedAt,
-				)
-			}
-		}
+func parseSeasonTimestamp(value string) (time.Time, error) {
+	if ts, err := time.Parse(time.RFC3339, value); err == nil {
+		return ts, nil
 	}
 
-	return nil
+	ts, err := time.Parse(time.DateOnly, value)
+	if err == nil {
+		return ts, nil
+	}
+
+	return time.Time{}, fmt.Errorf(
+		"invalid value %q (expected RFC3339 or YYYY-MM-DD)",
+		value,
+	)
 }
 
 //nolint:lll // readability

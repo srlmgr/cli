@@ -8,6 +8,7 @@ import (
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 )
 
+//nolint:goconst // by design
 var supportedImportFormatLiterals = []string{"json", "csv", "xml"}
 
 // ParseImportConfigs converts CLI values into protobuf ImportConfig entries.

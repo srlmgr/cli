@@ -125,7 +125,7 @@ func (r *setupRunner) ensureSeries(
 	)
 }
 
-//nolint:whitespace // editor/linter issue
+//nolint:whitespace,funlen // editor/linter issue
 func (r *setupRunner) ensureSeason(
 	ctx context.Context, seriesID, psID uint32, sCfg *SeasonConfig,
 ) (uint32, bool, error) {
@@ -145,17 +145,36 @@ func (r *setupRunner) ensureSeason(
 		func(s *commonv1.Season) bool { return s.GetName() == sCfg.Name },
 		func(s *commonv1.Season) uint32 { return s.GetId() },
 		func(ctx context.Context) (uint32, error) {
+			req := &commandv1.CreateSeasonRequest{
+				SeriesId:       seriesID,
+				Name:           sCfg.Name,
+				HasTeams:       sCfg.HasTeams,
+				IsMulticlass:   sCfg.Multiclass,
+				IsTeamBased:    sCfg.TeamBased,
+				TeamPointsTopN: sCfg.TeamPointsTopN,
+				SkipEvents:     sCfg.SkipEvents,
+				PointSystemId:  psID,
+			}
+
+			if sCfg.StartsAt != "" {
+				startsAt, parseErr := parseSeasonTimestamp(sCfg.StartsAt)
+				if parseErr != nil {
+					return 0, fmt.Errorf("parse season startsAt %q: %w", sCfg.StartsAt, parseErr)
+				}
+
+				req.StartsAt = timestamppb.New(startsAt)
+			}
+			if sCfg.EndsAt != "" {
+				endsAt, parseErr := parseSeasonTimestamp(sCfg.EndsAt)
+				if parseErr != nil {
+					return 0, fmt.Errorf("parse season endsAt %q: %w", sCfg.EndsAt, parseErr)
+				}
+
+				req.EndsAt = timestamppb.New(endsAt)
+			}
+
 			resp, err := r.cmdSvc.CreateSeason(ctx,
-				connect.NewRequest(&commandv1.CreateSeasonRequest{
-					SeriesId:       seriesID,
-					Name:           sCfg.Name,
-					HasTeams:       sCfg.HasTeams,
-					IsMulticlass:   sCfg.Multiclass,
-					IsTeamBased:    sCfg.TeamBased,
-					TeamPointsTopN: sCfg.TeamPointsTopN,
-					SkipEvents:     sCfg.SkipEvents,
-					PointSystemId:  psID,
-				}),
+				connect.NewRequest(req),
 			)
 			if err != nil {
 				return 0, fmt.Errorf("create season: %w", err)

@@ -1,3 +1,4 @@
+//nolint:goconst // by design
 package conversion
 
 import (
