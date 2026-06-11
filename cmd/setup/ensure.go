@@ -5,7 +5,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"strconv"
 	"time"
 
 	commandv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/command/v1"
@@ -463,7 +462,7 @@ func (r *setupRunner) ensureDriver(
 	)
 }
 
-//nolint:whitespace // editor/linter issue
+//nolint:whitespace,funlen // editor/linter issue
 func (r *setupRunner) ensureTeam(
 	ctx context.Context, seasonID uint32, cfg TeamConfig,
 ) (uint32, bool, error) {
@@ -480,15 +479,38 @@ func (r *setupRunner) ensureTeam(
 
 			return resp.Msg.GetItems(), nil
 		},
-		func(t *commonv1.Team) bool { return t.GetName() == cfg.Name },
+		func(t *commonv1.Team) bool {
+			return t.GetName() == cfg.Name && t.GetCarNumber() == cfg.CarNumber
+		},
 		func(t *commonv1.Team) uint32 { return t.GetId() },
 		func(ctx context.Context) (uint32, error) {
-			resp, err := r.cmdSvc.CreateTeam(ctx,
-				connect.NewRequest(&commandv1.CreateTeamRequest{
-					SeasonId: seasonID,
-					Name:     cfg.Name,
-				}),
-			)
+			req := connect.NewRequest(&commandv1.CreateTeamRequest{
+				SeasonId: seasonID,
+				Name:     cfg.Name,
+			})
+			if cfg.CarModel != "" {
+				if cm, ok := r.carModelLookup[cfg.CarModel]; ok {
+					req.Msg.CarModelId = cm.Id
+				}
+			}
+			if cfg.CarNumber != "" {
+				req.Msg.CarNumber = cfg.CarNumber
+			}
+			if cfg.JoinedAt != "" {
+				joinedAt, parseErr := time.Parse(time.DateOnly, cfg.JoinedAt)
+				if parseErr != nil {
+					return 0, fmt.Errorf("parse team joinedAt %q: %w", cfg.JoinedAt, parseErr)
+				}
+				req.Msg.JoinedAt = timestamppb.New(joinedAt)
+			}
+			if cfg.LeftAt != "" {
+				leftAt, parseErr := time.Parse(time.DateOnly, cfg.LeftAt)
+				if parseErr != nil {
+					return 0, fmt.Errorf("parse team leftAt %q: %w", cfg.LeftAt, parseErr)
+				}
+				req.Msg.LeftAt = timestamppb.New(leftAt)
+			}
+			resp, err := r.cmdSvc.CreateTeam(ctx, req)
 			if err != nil {
 				return 0, fmt.Errorf("create team: %w", err)
 			}
@@ -656,16 +678,44 @@ func (r *setupRunner) ensureRaceGrid(
 
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) setTeamMembers(
-	ctx context.Context, teamID uint32, drivers []uint32,
+	ctx context.Context, teamID uint32, drivers []TeamDriverConfig,
 ) error {
 	if r.dryRun {
 		return nil
 	}
+	members := make([]*commandv1.TeamMember, len(drivers))
+	for i := range drivers {
+		joinedAt, err := time.Parse(time.DateOnly, drivers[i].JoinedAt)
+		if err != nil {
+			return fmt.Errorf("parse team member joinedAt %q: %w", drivers[i].JoinedAt, err)
+		}
+		var leftAt *time.Time
+		if drivers[i].LeftAt != "" {
+			parsedLeftAt, err := time.Parse(time.DateOnly, drivers[i].LeftAt)
+			if err != nil {
+				return fmt.Errorf("parse team member leftAt %q: %w", drivers[i].LeftAt, err)
+			}
+			leftAt = &parsedLeftAt
+		}
+
+		driver, ok := r.driverLookup[drivers[i].Name]
+		if !ok {
+			return fmt.Errorf("driver %q not found for team member", drivers[i].Name)
+		}
+
+		members[i] = &commandv1.TeamMember{
+			DriverId: driver.Id,
+			JoinedAt: timestamppb.New(joinedAt),
+		}
+		if leftAt != nil {
+			members[i].LeftAt = timestamppb.New(*leftAt)
+		}
+	}
 
 	_, err := r.cmdSvc.SetTeamMembers(ctx,
 		connect.NewRequest(&commandv1.SetTeamMembersRequest{
-			TeamId:    teamID,
-			DriverIds: drivers,
+			TeamId:  teamID,
+			Members: members,
 		}),
 	)
 	if err != nil {
@@ -681,19 +731,23 @@ func (r *setupRunner) addSeasonDriver(
 	seasonID, driverID, carModelID uint32,
 	carNumber string,
 	joinedAt time.Time,
+	leftAt *time.Time,
 ) error {
 	if r.dryRun {
 		return nil
 	}
-
+	req := &commandv1.AddSeasonDriverRequest{
+		DriverId:   driverID,
+		SeasonId:   seasonID,
+		CarModelId: carModelID,
+		CarNumber:  carNumber,
+		JoinedAt:   timestamppb.New(joinedAt),
+	}
+	if leftAt != nil {
+		req.LeftAt = timestamppb.New(*leftAt)
+	}
 	_, err := r.cmdSvc.AddSeasonDriver(ctx,
-		connect.NewRequest(&commandv1.AddSeasonDriverRequest{
-			DriverId:   driverID,
-			SeasonId:   seasonID,
-			CarModelId: strconv.FormatUint(uint64(carModelID), 10),
-			CarNumber:  carNumber,
-			JoinedAt:   timestamppb.New(joinedAt),
-		}),
+		connect.NewRequest(req),
 	)
 	if err != nil {
 		return fmt.Errorf("add season driver: %w", err)

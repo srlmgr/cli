@@ -120,13 +120,19 @@ type SeasonDriverConfig struct {
 
 // TeamConfig defines a team under a season.
 type TeamConfig struct {
-	Name    string             `yaml:"name"`
-	Drivers []TeamDriverConfig `yaml:"drivers"`
+	Name      string             `yaml:"name"`
+	CarModel  string             `yaml:"carModel"`
+	CarNumber string             `yaml:"carNumber"`
+	Drivers   []TeamDriverConfig `yaml:"drivers"`
+	JoinedAt  string             `yaml:"joinedAt"`
+	LeftAt    string             `yaml:"leftAt"`
 }
 
 // TeamDriverConfig defines a driver under a team.
 type TeamDriverConfig struct {
-	Name string `yaml:"name"`
+	Name     string `yaml:"name"`
+	JoinedAt string `yaml:"joinedAt"`
+	LeftAt   string `yaml:"leftAt"`
 }
 
 // EventConfig defines an event under a season.
