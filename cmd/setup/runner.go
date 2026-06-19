@@ -294,6 +294,9 @@ func (r *setupRunner) setupSeasonList(
 		if err := r.setupSeasonCarClasses(ctx, snID, seasons[i].CarClasses); err != nil {
 			return fmt.Errorf("season %q car classes: %w", seasons[i].Name, err)
 		}
+		if err := r.setupSeasonCarModels(ctx, snID, seasons[i].CarModels); err != nil {
+			return fmt.Errorf("season %q car models: %w", seasons[i].Name, err)
+		}
 
 	}
 
@@ -496,24 +499,37 @@ func (r *setupRunner) setupSeasonCarClasses(
 	seasonID uint32,
 	carClasses []SeasonCarClassConfig,
 ) error {
+	toSetCarClasses := make([]uint32, 0, len(carClasses))
 	for i := range carClasses {
 		if carClasses[i].Name == "" {
 			return fmt.Errorf("season %d car class[%d]: name is required", seasonID, i)
 		}
 		carClass := r.carClassLookup[carClasses[i].Name]
-		err := r.ensureSeasonCarClass(ctx, seasonID, carClass.GetId())
-		if err != nil {
-			return fmt.Errorf("season %d car class[%d]: %w", seasonID, i, err)
-		}
-		if err := r.printResult(
-			"season-car-class",
-			carClasses[i].Name,
-			carClass.GetId(),
-			true,
-		); err != nil {
-			return err
-		}
+		toSetCarClasses = append(toSetCarClasses, carClass.GetId())
+	}
+	if err := r.setSeasonCarClasses(ctx, seasonID, toSetCarClasses); err != nil {
+		return fmt.Errorf("set season car classes: %w", err)
+	}
 
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setupSeasonCarModels(
+	ctx context.Context,
+	seasonID uint32,
+	carModels []SeasonCarModelConfig,
+) error {
+	toSetCarModels := make([]uint32, 0, len(carModels))
+	for i := range carModels {
+		if carModels[i].Name == "" {
+			return fmt.Errorf("season %d car model[%d]: name is required", seasonID, i)
+		}
+		carModel := r.carModelLookup[carModels[i].Name]
+		toSetCarModels = append(toSetCarModels, carModel.GetId())
+	}
+	if err := r.setSeasonCarModels(ctx, seasonID, toSetCarModels); err != nil {
+		return fmt.Errorf("set season car models: %w", err)
 	}
 
 	return nil

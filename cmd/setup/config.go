@@ -104,10 +104,14 @@ type SeasonConfig struct {
 	Events          []EventConfig          `yaml:"events"`
 	Teams           []TeamConfig           `yaml:"teams"`
 	CarClasses      []SeasonCarClassConfig `yaml:"carClasses"`
+	CarModels       []SeasonCarModelConfig `yaml:"carModels"`
 }
 
 // SeasonCarClassConfig defines a car class under a season.
 type SeasonCarClassConfig struct {
+	Name string `yaml:"name"`
+}
+type SeasonCarModelConfig struct {
 	Name string `yaml:"name"`
 }
 type SeasonDriverConfig struct {

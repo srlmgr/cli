@@ -360,6 +360,40 @@ func (r *setupRunner) ensureSeasonCarClass(
 }
 
 //nolint:whitespace // editor/linter issue
+func (r *setupRunner) setSeasonCarModels(
+	ctx context.Context,
+	seasonID uint32,
+	carModelIDs []uint32,
+) error {
+	if r.dryRun {
+		return nil
+	}
+	_, err := r.cmdSvc.SetSeasonCarModels(ctx,
+		connect.NewRequest(&commandv1.SetSeasonCarModelsRequest{
+			SeasonId:    seasonID,
+			CarModelIds: carModelIDs,
+		}))
+	return err
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setSeasonCarClasses(
+	ctx context.Context,
+	seasonID uint32,
+	carClassesIDs []uint32,
+) error {
+	if r.dryRun {
+		return nil
+	}
+	_, err := r.cmdSvc.SetSeasonCarClasses(ctx,
+		connect.NewRequest(&commandv1.SetSeasonCarClassesRequest{
+			SeasonId:    seasonID,
+			CarClassIds: carClassesIDs,
+		}))
+	return err
+}
+
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureTrack(
 	ctx context.Context, name string,
 ) (uint32, bool, error) {
