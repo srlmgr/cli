@@ -498,7 +498,7 @@ func (r *setupRunner) ensureDriver(
 
 //nolint:whitespace,funlen // editor/linter issue
 func (r *setupRunner) ensureTeam(
-	ctx context.Context, seasonID uint32, cfg TeamConfig,
+	ctx context.Context, seasonID uint32, cfg *TeamConfig,
 ) (uint32, bool, error) {
 	return findOrCreate(ctx,
 		func(ctx context.Context) ([]*commonv1.Team, error) {
@@ -754,6 +754,62 @@ func (r *setupRunner) setTeamMembers(
 	)
 	if err != nil {
 		return fmt.Errorf("set team members: %w", err)
+	}
+
+	return nil
+}
+
+//nolint:whitespace // editor/linter issue
+func (r *setupRunner) setSeasonDrivers(
+	ctx context.Context, seasonID uint32, drivers []SeasonDriverConfig,
+) error {
+	if r.dryRun {
+		return nil
+	}
+	members := make([]*commandv1.SetSeasonDriver, len(drivers))
+	for i := range drivers {
+		joinedAt, err := time.Parse(time.DateOnly, drivers[i].JoinedAt)
+		if err != nil {
+			return fmt.Errorf("parse season driver joinedAt %q: %w", drivers[i].JoinedAt, err)
+		}
+		var leftAt *time.Time
+		if drivers[i].LeftAt != "" {
+			parsedLeftAt, err := time.Parse(time.DateOnly, drivers[i].LeftAt)
+			if err != nil {
+				return fmt.Errorf("parse season driver leftAt %q: %w", drivers[i].LeftAt, err)
+			}
+			leftAt = &parsedLeftAt
+		}
+
+		driver, ok := r.driverLookup[drivers[i].Name]
+		if !ok {
+			return fmt.Errorf("driver %q not found for season driver", drivers[i].Name)
+		}
+
+		cm, ok := r.carModelLookup[drivers[i].CarModel]
+		if !ok {
+			return fmt.Errorf("car model %q not found for season driver %q", drivers[i].CarModel, drivers[i].Name)
+		}
+
+		members[i] = &commandv1.SetSeasonDriver{
+			DriverId:   driver.Id,
+			JoinedAt:   timestamppb.New(joinedAt),
+			CarModelId: cm.Id,
+			CarNumber:  drivers[i].CarNumber,
+		}
+		if leftAt != nil {
+			members[i].LeftAt = timestamppb.New(*leftAt)
+		}
+	}
+
+	_, err := r.cmdSvc.SetSeasonDrivers(ctx,
+		connect.NewRequest(&commandv1.SetSeasonDriversRequest{
+			SeasonId: seasonID,
+			Drivers:  members,
+		}),
+	)
+	if err != nil {
+		return fmt.Errorf("set season drivers: %w", err)
 	}
 
 	return nil

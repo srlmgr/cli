@@ -79,6 +79,10 @@ type commandClient interface {
 		context.Context,
 		*connect.Request[commandv1.AddSeasonDriverRequest],
 	) (*connect.Response[commandv1.AddSeasonDriverResponse], error)
+	SetSeasonDrivers(
+		context.Context,
+		*connect.Request[commandv1.SetSeasonDriversRequest],
+	) (*connect.Response[commandv1.SetSeasonDriversResponse], error)
 	SetSeasonCarClasses(
 		context.Context,
 		*connect.Request[commandv1.SetSeasonCarClassesRequest],

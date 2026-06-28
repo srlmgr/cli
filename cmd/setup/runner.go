@@ -313,7 +313,7 @@ func (r *setupRunner) setupSeasonDrivers(
 	defaultJoinedAt string,
 ) error {
 	for i := range drivers {
-		driverCfg := drivers[i]
+		driverCfg := &drivers[i]
 		if driverCfg.Name == "" {
 			return fmt.Errorf("season %q drivers[%d]: name is required", seasonName, i)
 		}
@@ -321,7 +321,7 @@ func (r *setupRunner) setupSeasonDrivers(
 			return fmt.Errorf("season %q drivers[%d]: carNumber is required", seasonName, i)
 		}
 
-		driver, ok := r.driverLookup[driverCfg.Name]
+		_, ok := r.driverLookup[driverCfg.Name]
 		if !ok {
 			return fmt.Errorf(
 				"season %q drivers[%d]: driver %q not found",
@@ -331,26 +331,8 @@ func (r *setupRunner) setupSeasonDrivers(
 			)
 		}
 
-		carModelName := driverCfg.CarModel
-		if carModelName == "" {
-			carModelName = defaultCarModel
-		}
-		if carModelName == "" {
-			return fmt.Errorf(
-				"season %q drivers[%d]: carModel is required when defaultCarModel is empty",
-				seasonName,
-				i,
-			)
-		}
-
-		carModel, ok := r.carModelLookup[carModelName]
-		if !ok {
-			return fmt.Errorf(
-				"season %q drivers[%d]: car model %q not found",
-				seasonName,
-				i,
-				carModelName,
-			)
+		if driverCfg.CarModel == "" {
+			driverCfg.CarModel = defaultCarModel
 		}
 
 		joinedAtRaw := driverCfg.JoinedAt
@@ -361,7 +343,7 @@ func (r *setupRunner) setupSeasonDrivers(
 			joinedAtRaw = time.Now().Format(time.DateOnly)
 		}
 
-		joinedAt, err := time.Parse(time.DateOnly, joinedAtRaw)
+		_, err := time.Parse(time.DateOnly, joinedAtRaw)
 		if err != nil {
 			return fmt.Errorf(
 				"season %q drivers[%d]: invalid joinedAt %q (expected YYYY-MM-DD): %w",
@@ -371,43 +353,33 @@ func (r *setupRunner) setupSeasonDrivers(
 				err,
 			)
 		}
-		var leftAt *time.Time = nil
-		if driverCfg.LeftAt != "" {
-			leftAtParsed, err := time.Parse(time.DateOnly, driverCfg.LeftAt)
-			if err != nil {
-				return fmt.Errorf(
-					"season %q drivers[%d]: invalid leftAt %q (expected YYYY-MM-DD): %w",
-					seasonName,
-					i,
-					driverCfg.LeftAt,
-					err,
-				)
-			}
-			leftAt = &leftAtParsed
-		}
-		if err := r.addSeasonDriver(
-			ctx,
-			seasonID,
-			driver.GetId(),
-			carModel.GetId(),
-			driverCfg.CarNumber,
-			joinedAt,
-			leftAt,
-		); err != nil {
-			return fmt.Errorf("season %q drivers[%d]: %w", seasonName, i, err)
-		}
+		driverCfg.JoinedAt = joinedAtRaw
 
-		if err := r.printSeasonDriverResult(
-			seasonName,
-			driverCfg.Name,
-			driverCfg.CarNumber,
-			carModelName,
-			joinedAtRaw,
-		); err != nil {
-			return err
-		}
+		// if err := r.addSeasonDriver(
+		// 	ctx,
+		// 	seasonID,
+		// 	driver.GetId(),
+		// 	carModel.GetId(),
+		// 	driverCfg.CarNumber,
+		// 	joinedAt,
+		// 	leftAt,
+		// ); err != nil {
+		// 	return fmt.Errorf("season %q drivers[%d]: %w", seasonName, i, err)
+		// }
+
+		// if err := r.printSeasonDriverResult(
+		// 	seasonName,
+		// 	driverCfg.Name,
+		// 	driverCfg.CarNumber,
+		// 	carModelName,
+		// 	joinedAtRaw,
+		// ); err != nil {
+		// 	return err
+		// }
 	}
-
+	if err := r.setSeasonDrivers(ctx, seasonID, drivers); err != nil {
+		return fmt.Errorf("set season drivers: %w", err)
+	}
 	return nil
 }
 
@@ -422,7 +394,7 @@ func (r *setupRunner) setupTeamList(
 		if teams[i].JoinedAt == "" {
 			teams[i].JoinedAt = defaultJoinedAt
 		}
-		tmID, created, err := r.ensureTeam(ctx, seasonID, teams[i])
+		tmID, created, err := r.ensureTeam(ctx, seasonID, &teams[i])
 		if err != nil {
 			return fmt.Errorf("team %q: %w", teams[i].Name, err)
 		}
