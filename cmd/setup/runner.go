@@ -1,4 +1,3 @@
-//nolint:dupl // may happen
 package setup
 
 import (
@@ -248,7 +247,7 @@ func (r *setupRunner) setupSeriesList(
 	return nil
 }
 
-//nolint:whitespace // editor/linter issue
+//nolint:whitespace,funlen // editor/linter issue
 func (r *setupRunner) setupSeasonList(
 	ctx context.Context,
 	seriesID uint32,
@@ -355,27 +354,6 @@ func (r *setupRunner) setupSeasonDrivers(
 		}
 		driverCfg.JoinedAt = joinedAtRaw
 
-		// if err := r.addSeasonDriver(
-		// 	ctx,
-		// 	seasonID,
-		// 	driver.GetId(),
-		// 	carModel.GetId(),
-		// 	driverCfg.CarNumber,
-		// 	joinedAt,
-		// 	leftAt,
-		// ); err != nil {
-		// 	return fmt.Errorf("season %q drivers[%d]: %w", seasonName, i, err)
-		// }
-
-		// if err := r.printSeasonDriverResult(
-		// 	seasonName,
-		// 	driverCfg.Name,
-		// 	driverCfg.CarNumber,
-		// 	carModelName,
-		// 	joinedAtRaw,
-		// ); err != nil {
-		// 	return err
-		// }
 	}
 	if err := r.setSeasonDrivers(ctx, seasonID, drivers); err != nil {
 		return fmt.Errorf("set season drivers: %w", err)
@@ -931,7 +909,7 @@ func (r *setupRunner) printAliasResult(entityType, name, simName string) error {
 	return err
 }
 
-//nolint:whitespace,lll // editor/linter issue
+//nolint:whitespace,lll,unused // editor/linter issue
 func (r *setupRunner) printSeasonDriverResult(
 	seasonName, driverName, carNumber, carModelName, joinedAt string,
 ) error {

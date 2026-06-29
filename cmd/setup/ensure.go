@@ -344,22 +344,6 @@ func (r *setupRunner) ensureCarModelInClass(
 }
 
 //nolint:whitespace // editor/linter issue
-func (r *setupRunner) ensureSeasonCarClass(
-	ctx context.Context,
-	seasonID, carClassID uint32,
-) error {
-	if r.dryRun {
-		return nil
-	}
-	_, err := r.cmdSvc.AssignCarClassToSeason(ctx,
-		connect.NewRequest(&commandv1.AssignCarClassToSeasonRequest{
-			SeasonId:   seasonID,
-			CarClassId: carClassID,
-		}))
-	return err
-}
-
-//nolint:whitespace // editor/linter issue
 func (r *setupRunner) setSeasonCarModels(
 	ctx context.Context,
 	seasonID uint32,
@@ -759,7 +743,7 @@ func (r *setupRunner) setTeamMembers(
 	return nil
 }
 
-//nolint:whitespace // editor/linter issue
+//nolint:whitespace,funlen // editor/linter issue
 func (r *setupRunner) setSeasonDrivers(
 	ctx context.Context, seasonID uint32, drivers []SeasonDriverConfig,
 ) error {
@@ -788,7 +772,11 @@ func (r *setupRunner) setSeasonDrivers(
 
 		cm, ok := r.carModelLookup[drivers[i].CarModel]
 		if !ok {
-			return fmt.Errorf("car model %q not found for season driver %q", drivers[i].CarModel, drivers[i].Name)
+			return fmt.Errorf(
+				"car model %q not found for season driver %q",
+				drivers[i].CarModel,
+				drivers[i].Name,
+			)
 		}
 
 		members[i] = &commandv1.SetSeasonDriver{
@@ -810,37 +798,6 @@ func (r *setupRunner) setSeasonDrivers(
 	)
 	if err != nil {
 		return fmt.Errorf("set season drivers: %w", err)
-	}
-
-	return nil
-}
-
-//nolint:whitespace // editor/linter issue
-func (r *setupRunner) addSeasonDriver(
-	ctx context.Context,
-	seasonID, driverID, carModelID uint32,
-	carNumber string,
-	joinedAt time.Time,
-	leftAt *time.Time,
-) error {
-	if r.dryRun {
-		return nil
-	}
-	req := &commandv1.AddSeasonDriverRequest{
-		DriverId:   driverID,
-		SeasonId:   seasonID,
-		CarModelId: carModelID,
-		CarNumber:  carNumber,
-		JoinedAt:   timestamppb.New(joinedAt),
-	}
-	if leftAt != nil {
-		req.LeftAt = timestamppb.New(*leftAt)
-	}
-	_, err := r.cmdSvc.AddSeasonDriver(ctx,
-		connect.NewRequest(req),
-	)
-	if err != nil {
-		return fmt.Errorf("add season driver: %w", err)
 	}
 
 	return nil
