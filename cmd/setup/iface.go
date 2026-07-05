@@ -58,6 +58,14 @@ type commandClient interface {
 		context.Context,
 		*connect.Request[commandv1.CreateCarModelRequest],
 	) (*connect.Response[commandv1.CreateCarModelResponse], error)
+	CreateCarModelV2(
+		context.Context,
+		*connect.Request[commandv1.CreateCarModelV2Request],
+	) (*connect.Response[commandv1.CreateCarModelV2Response], error)
+	CreateCarModelVariant(
+		context.Context,
+		*connect.Request[commandv1.CreateCarModelVariantRequest],
+	) (*connect.Response[commandv1.CreateCarModelVariantResponse], error)
 	CreateCarClass(
 		context.Context,
 		*connect.Request[commandv1.CreateCarClassRequest],
@@ -174,6 +182,14 @@ type queryClient interface {
 		context.Context,
 		*connect.Request[queryv1.ListCarModelsRequest],
 	) (*connect.Response[queryv1.ListCarModelsResponse], error)
+	ListCarModelsV2(
+		context.Context,
+		*connect.Request[queryv1.ListCarModelsV2Request],
+	) (*connect.Response[queryv1.ListCarModelsV2Response], error)
+	ListCarModelVariants(
+		context.Context,
+		*connect.Request[queryv1.ListCarModelVariantsRequest],
+	) (*connect.Response[queryv1.ListCarModelVariantsResponse], error)
 	ListCarClasses(
 		context.Context,
 		*connect.Request[queryv1.ListCarClassesRequest],

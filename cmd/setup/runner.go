@@ -10,13 +10,15 @@ import (
 )
 
 type setupRunner struct {
-	filePath       string
-	dryRun         bool
-	out            io.Writer
-	cmdSvc         commandClient
-	qrySvc         queryClient
-	driverLookup   map[string]*commonv1.Driver
-	carModelLookup map[string]*commonv1.CarModel
+	filePath              string
+	dryRun                bool
+	out                   io.Writer
+	cmdSvc                commandClient
+	qrySvc                queryClient
+	driverLookup          map[string]*commonv1.Driver
+	carModelLookupOld     map[string]*commonv1.CarModel
+	carModelVariantLookup map[string]*commonv1.CarModelVariant
+
 	carClassLookup map[string]*commonv1.CarClass
 }
 
@@ -48,7 +50,9 @@ func (r *setupRunner) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("setup tracks: %w", err)
 	}
-	r.carModelLookup = make(map[string]*commonv1.CarModel, 0)
+	r.carModelLookupOld = make(map[string]*commonv1.CarModel, 0)
+	r.carModelVariantLookup = make(map[string]*commonv1.CarModelVariant, 0)
+
 	modelIDs, err := r.setupCarManufacturers(ctx, cfg.CarManufacturers)
 	if err != nil {
 		return fmt.Errorf("setup car manufacturers: %w", err)
@@ -475,7 +479,7 @@ func (r *setupRunner) setupSeasonCarModels(
 		if carModels[i].Name == "" {
 			return fmt.Errorf("season %d car model[%d]: name is required", seasonID, i)
 		}
-		carModel := r.carModelLookup[carModels[i].Name]
+		carModel := r.carModelLookupOld[carModels[i].Name]
 		toSetCarModels = append(toSetCarModels, carModel.GetId())
 	}
 	if err := r.setSeasonCarModels(ctx, seasonID, toSetCarModels); err != nil {
@@ -535,6 +539,7 @@ func (r *setupRunner) setupCarManufacturers(
 	mfrs []CarManufacturerConfig,
 ) (map[string]uint32, error) {
 	modelIDs := make(map[string]uint32)
+	modelVariantIDs := make(map[string]uint32)
 
 	for i := range mfrs {
 		mfrID, created, err := r.ensureCarManufacturer(ctx, mfrs[i].Name)
@@ -549,9 +554,12 @@ func (r *setupRunner) setupCarManufacturers(
 		if err := r.setupBrandList(ctx, mfrID, mfrs[i].Brands, modelIDs); err != nil {
 			return nil, fmt.Errorf("car manufacturer %q brands: %w", mfrs[i].Name, err)
 		}
+		if err := r.setupModelList(ctx, mfrID, mfrs[i].Models, modelVariantIDs); err != nil {
+			return nil, fmt.Errorf("car manufacturer %q models: %w", mfrs[i].Name, err)
+		}
 	}
 
-	return modelIDs, nil
+	return modelVariantIDs, nil
 }
 
 //nolint:whitespace,lll // editor/linter issue
@@ -571,7 +579,7 @@ func (r *setupRunner) setupBrandList(
 			return err
 		}
 
-		if err := r.setupModelList(ctx, mfrID, brandID, brands[i].Models, modelIDs); err != nil {
+		if err := r.setupModelListOld(ctx, mfrID, brandID, brands[i].Models, modelIDs); err != nil {
 			return fmt.Errorf("car brand %q models: %w", brands[i].Name, err)
 		}
 	}
@@ -582,12 +590,37 @@ func (r *setupRunner) setupBrandList(
 //nolint:whitespace,lll // editor/linter issue
 func (r *setupRunner) setupModelList(
 	ctx context.Context,
-	mfrID, brandID uint32,
+	mfrID uint32,
 	models []ModelConfig,
+	modelVariantIDs map[string]uint32,
+) error {
+	for i := range models {
+		model, created, err := r.ensureCarModelV2(ctx, mfrID, models[i].Name)
+		if err != nil {
+			return fmt.Errorf("car model %q: %w", models[i].Name, err)
+		}
+
+		if err := r.printResult("car-model", models[i].Name, model, created); err != nil {
+			return err
+		}
+		if err := r.setupModelVariants(ctx, mfrID, model, models[i].Variants, modelVariantIDs); err != nil {
+			return fmt.Errorf("car model %q variants: %w", models[i].Name, err)
+		}
+
+	}
+
+	return nil
+}
+
+//nolint:whitespace,lll // editor/linter issue
+func (r *setupRunner) setupModelListOld(
+	ctx context.Context,
+	mfrID, brandID uint32,
+	models []ModelConfigOld,
 	modelIDs map[string]uint32,
 ) error {
 	for i := range models {
-		modelID, created, err := r.ensureCarModel(ctx, mfrID, brandID, models[i].Name)
+		modelID, created, err := r.ensureCarModelOld(ctx, mfrID, brandID, models[i].Name)
 		if err != nil {
 			return fmt.Errorf("car model %q: %w", models[i].Name, err)
 		}
@@ -596,8 +629,32 @@ func (r *setupRunner) setupModelList(
 			return err
 		}
 
-		r.carModelLookup[models[i].Name] = modelID
+		r.carModelLookupOld[models[i].Name] = modelID
 		modelIDs[models[i].Name] = modelID.GetId()
+	}
+
+	return nil
+}
+
+//nolint:whitespace,lll // editor/linter issue
+func (r *setupRunner) setupModelVariants(
+	ctx context.Context,
+	mfrID, brandID uint32,
+	modelVariants []ModelVariantConfig,
+	modelVariantIDs map[string]uint32,
+) error {
+	for i := range modelVariants {
+		modelID, created, err := r.ensureCarModelVariant(ctx, mfrID, brandID, modelVariants[i].Name)
+		if err != nil {
+			return fmt.Errorf("car model %q: %w", modelVariants[i].Name, err)
+		}
+
+		if err := r.printResult("car-model", modelVariants[i].Name, modelID.GetId(), created); err != nil {
+			return err
+		}
+
+		r.carModelVariantLookup[modelVariants[i].Name] = modelID
+		modelVariantIDs[modelVariants[i].Name] = modelID.GetId()
 	}
 
 	return nil
@@ -646,7 +703,7 @@ func (r *setupRunner) setupCarClassModelList(
 	models []CarClassModelConfig,
 ) error {
 	for i := range models {
-		carModel := r.carModelLookup[models[i].Name]
+		carModel := r.carModelLookupOld[models[i].Name]
 		err := r.ensureCarModelInClass(ctx, carClassID, carModel.GetId())
 		if err != nil {
 			return fmt.Errorf("car model %q: %w", models[i].Name, err)

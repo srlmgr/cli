@@ -192,16 +192,33 @@ type RaceGridConfig struct {
 type CarManufacturerConfig struct {
 	Name   string        `yaml:"name"`
 	Brands []BrandConfig `yaml:"brands"`
+	Models []ModelConfig `yaml:"models"`
 }
 
 // BrandConfig defines a car brand and its child models.
+
+// Deprecated: Use ModelConfig instead.
 type BrandConfig struct {
-	Name   string        `yaml:"name"`
-	Models []ModelConfig `yaml:"models"`
+	Name   string           `yaml:"name"`
+	Models []ModelConfigOld `yaml:"models"`
 }
 
 // ModelConfig defines a car model.
 type ModelConfig struct {
+	Name     string               `yaml:"name"`
+	Variants []ModelVariantConfig `yaml:"variants"`
+}
+
+// ModelConfig defines a car model.
+type ModelVariantConfig struct {
+	Name        string                   `yaml:"name"`
+	Simulations []EntitySimulationConfig `yaml:"simulations"`
+}
+
+// ModelConfigOld defines a car model.
+//
+// Deprecated: Use ModelConfig instead.
+type ModelConfigOld struct {
 	Name        string                   `yaml:"name"`
 	Simulations []EntitySimulationConfig `yaml:"simulations"`
 }
@@ -528,7 +545,7 @@ func validateBrands(mfrIdx int, brands []BrandConfig) error {
 	return nil
 }
 
-func validateModels(mfrIdx, brandIdx int, models []ModelConfig) error {
+func validateModels(mfrIdx, brandIdx int, models []ModelConfigOld) error {
 	for k := range models {
 		if models[k].Name == "" {
 			return fmt.Errorf(
