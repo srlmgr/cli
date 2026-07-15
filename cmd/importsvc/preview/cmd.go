@@ -91,11 +91,11 @@ func (c *previewCommand) run(ctx context.Context) error {
 
 	for _, row := range rows {
 		if _, err = fmt.Fprintf(c.out,
-			"  row: id=%d race_grid_id=%d driver_id=%d car_model_id=%d position=%d laps=%d\n",
+			"  row: id=%d race_grid_id=%d driver_id=%d car_model_variant_id=%d position=%d laps=%d\n",
 			row.GetId(),
 			row.GetRaceGridId(),
 			row.GetDriverId(),
-			row.GetCarModelId(),
+			row.GetCarModelVariantId(),
 			row.GetFinishingPosition(),
 			row.GetCompletedLaps(),
 		); err != nil {

@@ -87,13 +87,13 @@ would be automatically run every time you use the `git commit` command.
 The pre-commit hooks used by `cli` are located within the
 [`.pre-commit-config.yml`][precommit-config] file. These hooks are configured to run;
 
--   Series of basic checks (JSON, YAML, XML file schema validation)
--   Checks for merge conflicts, and possible leaks of private keys
--   File formatters - whitespace trimming, end-of-file fixers
--   Checks for executable scripts
--   JSON formatters
--   Code Formatters
--   Test-suite
+- Series of basic checks (JSON, YAML, XML file schema validation)
+- Checks for merge conflicts, and possible leaks of private keys
+- File formatters - whitespace trimming, end-of-file fixers
+- Checks for executable scripts
+- JSON formatters
+- Code Formatters
+- Test-suite
 
 To install pre-commit, simply use the Makefile command
 
@@ -247,8 +247,6 @@ goreleaser release
 
 The current `.goreleaser.yml` is target for creating docker images and artefacts to be created by Github actions.
 
-
-
 ### Running `cli`
 
 To run cli, use the command
@@ -282,36 +280,36 @@ cli setup --file setup.yml
 
 **Flags:**
 
-| Flag | Description |
-| :--- | :--- |
+| Flag           | Description                            |
+| :------------- | :------------------------------------- |
 | `-f`, `--file` | Path to the YAML setup file (required) |
-| `--dry-run` | Preview actions without making changes |
+| `--dry-run`    | Preview actions without making changes |
 
 **YAML configuration example:**
 
 ```yaml
 pointSystems:
-  - name: Standard
+    - name: Standard
 
 simulations:
-  - name: iRacing
-    series:
-      - name: Porsche Cup
-        seasons:
-          - name: Saison XVIII
-            pointSystem: Standard
+    - name: iRacing
+      series:
+          - name: Porsche Cup
+            seasons:
+                - name: Saison XVIII
+                  pointSystem: Standard
 
 carManufacturers:
-  - name: Porsche
-    brands:
-      - name: Porsche 911
-        models:
-          - name: Porsche 911 GT3 Cup (992)
+    - name: Porsche
+      models:
+          - name: Porsche 911
+            variants:
+                - name: Porsche 911 GT3 Cup (992)
 
 tracks:
-  - name: Interlagos
-    layouts:
-      - name: Grand Prix
+    - name: Interlagos
+      layouts:
+          - name: Grand Prix
 ```
 
 **Sample output:**
@@ -373,9 +371,9 @@ requests are merged.
 
 Labels allowed;
 
--   `major`: Affects the `<major>` version number for semantic versioning
--   `minor`, `enhancement`, `update`, `feature`: Affects the `<minor>` version number for semantic versioning
--   all other labels affect the `<patch>` version number
+- `major`: Affects the `<major>` version number for semantic versioning
+- `minor`, `enhancement`, `update`, `feature`: Affects the `<minor>` version number for semantic versioning
+- all other labels affect the `<patch>` version number
 
 Whenever a pull request with one of these labels is merged to the `master` branch,
 the corresponding version number will be bumped by one digit!
@@ -421,11 +419,9 @@ The remaining labels can be created as needed!
 [github-actions]: ../../actions
 [github-releases]: ../../releases
 [precommit-config]: ./.pre-commit-config.yaml
-
 [gomod-file]: ../main/go.mod
 [github-actions-tests]: ../../actions/workflows/tests.yml
 [dependabot-pulls]: ../../pulls?utf8=%E2%9C%93&q=is%3Apr%20author%3Aapp%2Fdependabot
-
 [semver-link]: https://semver.org
 [pre-commit]: https://pre-commit.com
 [github-repo]: https://github.com/new

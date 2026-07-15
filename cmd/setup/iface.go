@@ -49,15 +49,6 @@ type commandClient interface {
 		*connect.Request[commandv1.CreateCarManufacturerRequest],
 	) (*connect.Response[commandv1.CreateCarManufacturerResponse], error)
 
-	CreateCarBrand(
-		context.Context,
-		*connect.Request[commandv1.CreateCarBrandRequest],
-	) (*connect.Response[commandv1.CreateCarBrandResponse], error)
-
-	CreateCarModel(
-		context.Context,
-		*connect.Request[commandv1.CreateCarModelRequest],
-	) (*connect.Response[commandv1.CreateCarModelResponse], error)
 	CreateCarModelV2(
 		context.Context,
 		*connect.Request[commandv1.CreateCarModelV2Request],
@@ -70,10 +61,10 @@ type commandClient interface {
 		context.Context,
 		*connect.Request[commandv1.CreateCarClassRequest],
 	) (*connect.Response[commandv1.CreateCarClassResponse], error)
-	AssignCarModelToCarClass(
+	AssignCarModelVariantToCarClass(
 		context.Context,
-		*connect.Request[commandv1.AssignCarModelToCarClassRequest],
-	) (*connect.Response[commandv1.AssignCarModelToCarClassResponse], error)
+		*connect.Request[commandv1.AssignCarModelVariantToCarClassRequest],
+	) (*connect.Response[commandv1.AssignCarModelVariantToCarClassResponse], error)
 
 	CreateDriver(
 		context.Context,
@@ -95,10 +86,10 @@ type commandClient interface {
 		context.Context,
 		*connect.Request[commandv1.SetSeasonCarClassesRequest],
 	) (*connect.Response[commandv1.SetSeasonCarClassesResponse], error)
-	SetSeasonCarModels(
+	SetSeasonCarModelVariants(
 		context.Context,
-		*connect.Request[commandv1.SetSeasonCarModelsRequest],
-	) (*connect.Response[commandv1.SetSeasonCarModelsResponse], error)
+		*connect.Request[commandv1.SetSeasonCarModelVariantsRequest],
+	) (*connect.Response[commandv1.SetSeasonCarModelVariantsResponse], error)
 
 	CreateEvent(
 		context.Context,
@@ -173,15 +164,6 @@ type queryClient interface {
 		*connect.Request[queryv1.ListCarManufacturersRequest],
 	) (*connect.Response[queryv1.ListCarManufacturersResponse], error)
 
-	ListCarBrands(
-		context.Context,
-		*connect.Request[queryv1.ListCarBrandsRequest],
-	) (*connect.Response[queryv1.ListCarBrandsResponse], error)
-
-	ListCarModels(
-		context.Context,
-		*connect.Request[queryv1.ListCarModelsRequest],
-	) (*connect.Response[queryv1.ListCarModelsResponse], error)
 	ListCarModelsV2(
 		context.Context,
 		*connect.Request[queryv1.ListCarModelsV2Request],

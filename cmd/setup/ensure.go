@@ -219,42 +219,6 @@ func (r *setupRunner) ensureCarManufacturer(
 }
 
 //nolint:whitespace // editor/linter issue
-func (r *setupRunner) ensureCarBrand(
-	ctx context.Context, mfrID uint32, name string,
-) (uint32, bool, error) {
-	return findOrCreate(ctx,
-		func(ctx context.Context) ([]*commonv1.CarBrand, error) {
-			resp, err := r.qrySvc.ListCarBrands(ctx,
-				connect.NewRequest(&queryv1.ListCarBrandsRequest{
-					ManufacturerId: mfrID,
-				}),
-			)
-			if err != nil {
-				return nil, fmt.Errorf("list car brands: %w", err)
-			}
-
-			return resp.Msg.GetItems(), nil
-		},
-		func(b *commonv1.CarBrand) bool { return b.GetName() == name },
-		func(b *commonv1.CarBrand) uint32 { return b.GetId() },
-		func(ctx context.Context) (uint32, error) {
-			resp, err := r.cmdSvc.CreateCarBrand(ctx,
-				connect.NewRequest(&commandv1.CreateCarBrandRequest{
-					ManufacturerId: mfrID,
-					Name:           name,
-				}),
-			)
-			if err != nil {
-				return 0, fmt.Errorf("create car brand: %w", err)
-			}
-
-			return resp.Msg.GetCarBrand().GetId(), nil
-		},
-		r.dryRun,
-	)
-}
-
-//nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureCarModelV2(
 	ctx context.Context, mfrID uint32, name string,
 ) (uint32, bool, error) {
@@ -331,47 +295,6 @@ func (r *setupRunner) ensureCarModelVariant(
 	)
 }
 
-// ensureCarModel finds or creates a car model, scoped to both manufacturer and brand.
-// ListCarModels filters by manufacturer; brand-level scoping is applied in code.
-//
-//nolint:whitespace // editor/linter issue
-func (r *setupRunner) ensureCarModelOld(
-	ctx context.Context, mfrID, brandID uint32, name string,
-) (*commonv1.CarModel, bool, error) {
-	return findOrCreateFull(ctx,
-		func(ctx context.Context) ([]*commonv1.CarModel, error) {
-			resp, err := r.qrySvc.ListCarModels(ctx,
-				connect.NewRequest(&queryv1.ListCarModelsRequest{
-					ManufacturerId: mfrID,
-				}),
-			)
-			if err != nil {
-				return nil, fmt.Errorf("list car models: %w", err)
-			}
-
-			return resp.Msg.GetItems(), nil
-		},
-		func(m *commonv1.CarModel) bool {
-			return m.GetBrandId() == brandID && m.GetName() == name
-		},
-
-		func(ctx context.Context) (*commonv1.CarModel, error) {
-			resp, err := r.cmdSvc.CreateCarModel(ctx,
-				connect.NewRequest(&commandv1.CreateCarModelRequest{
-					BrandId: brandID,
-					Name:    name,
-				}),
-			)
-			if err != nil {
-				return nil, fmt.Errorf("create car model: %w", err)
-			}
-
-			return resp.Msg.GetCarModel(), nil
-		},
-		r.dryRun,
-	)
-}
-
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureCarClass(
 	ctx context.Context, name string,
@@ -407,32 +330,32 @@ func (r *setupRunner) ensureCarClass(
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureCarModelInClass(
 	ctx context.Context,
-	carClassID, carModelID uint32,
+	carClassID, carModelVariantID uint32,
 ) error {
 	if r.dryRun {
 		return nil
 	}
-	_, err := r.cmdSvc.AssignCarModelToCarClass(ctx,
-		connect.NewRequest(&commandv1.AssignCarModelToCarClassRequest{
-			CarClassId: carClassID,
-			CarModelId: carModelID,
+	_, err := r.cmdSvc.AssignCarModelVariantToCarClass(ctx,
+		connect.NewRequest(&commandv1.AssignCarModelVariantToCarClassRequest{
+			CarClassId:        carClassID,
+			CarModelVariantId: carModelVariantID,
 		}))
 	return err
 }
 
 //nolint:whitespace // editor/linter issue
-func (r *setupRunner) setSeasonCarModels(
+func (r *setupRunner) setSeasonCarModelVariants(
 	ctx context.Context,
 	seasonID uint32,
-	carModelIDs []uint32,
+	carModelVariantIDs []uint32,
 ) error {
 	if r.dryRun {
 		return nil
 	}
-	_, err := r.cmdSvc.SetSeasonCarModels(ctx,
-		connect.NewRequest(&commandv1.SetSeasonCarModelsRequest{
-			SeasonId:    seasonID,
-			CarModelIds: carModelIDs,
+	_, err := r.cmdSvc.SetSeasonCarModelVariants(ctx,
+		connect.NewRequest(&commandv1.SetSeasonCarModelVariantsRequest{
+			SeasonId:           seasonID,
+			CarModelVariantIds: carModelVariantIDs,
 		}))
 	return err
 }
@@ -583,9 +506,9 @@ func (r *setupRunner) ensureTeam(
 				SeasonId: seasonID,
 				Name:     cfg.Name,
 			})
-			if cfg.CarModel != "" {
-				if cm, ok := r.carModelLookupOld[cfg.CarModel]; ok {
-					req.Msg.CarModelId = cm.Id
+			if cfg.CarModelVariant != "" {
+				if cm, ok := r.carModelVariantLookup[cfg.CarModelVariant]; ok {
+					req.Msg.CarModelVariantId = cm.Id
 				}
 			}
 			if cfg.CarNumber != "" {
@@ -847,20 +770,20 @@ func (r *setupRunner) setSeasonDrivers(
 			return fmt.Errorf("driver %q not found for season driver", drivers[i].Name)
 		}
 
-		cm, ok := r.carModelLookupOld[drivers[i].CarModel]
+		cm, ok := r.carModelVariantLookup[drivers[i].CarModelVariant]
 		if !ok {
 			return fmt.Errorf(
-				"car model %q not found for season driver %q",
-				drivers[i].CarModel,
+				"car model variant %q not found for season driver %q",
+				drivers[i].CarModelVariant,
 				drivers[i].Name,
 			)
 		}
 
 		members[i] = &commandv1.SetSeasonDriver{
-			DriverId:   driver.Id,
-			JoinedAt:   timestamppb.New(joinedAt),
-			CarModelId: cm.Id,
-			CarNumber:  drivers[i].CarNumber,
+			DriverId:          driver.Id,
+			JoinedAt:          timestamppb.New(joinedAt),
+			CarModelVariantId: cm.Id,
+			CarNumber:         drivers[i].CarNumber,
 		}
 		if leftAt != nil {
 			members[i].LeftAt = timestamppb.New(*leftAt)
@@ -904,7 +827,7 @@ func (r *setupRunner) setSimulationDriverAliases(
 
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) setSimulationCarAliases(
-	ctx context.Context, carModelID, simID uint32, aliases []string,
+	ctx context.Context, carModelVariantID, simID uint32, aliases []string,
 ) error {
 	if r.dryRun {
 		return nil
@@ -912,9 +835,9 @@ func (r *setupRunner) setSimulationCarAliases(
 
 	_, err := r.cmdSvc.SetSimulationCarAliases(ctx,
 		connect.NewRequest(&commandv1.SetSimulationCarAliasesRequest{
-			CarModelId:   carModelID,
-			SimulationId: simID,
-			ExternalName: aliases,
+			CarModelVariantId: carModelVariantID,
+			SimulationId:      simID,
+			ExternalName:      aliases,
 		}),
 	)
 	if err != nil {

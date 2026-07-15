@@ -89,47 +89,47 @@ type SeriesConfig struct {
 
 // SeasonConfig defines a season and its associated point system name.
 type SeasonConfig struct {
-	Name            string                 `yaml:"name"`
-	PointSystem     string                 `yaml:"pointSystem"`
-	StartsAt        string                 `yaml:"startsAt"`
-	EndsAt          string                 `yaml:"endsAt"`
-	HasTeams        bool                   `yaml:"hasTeams"`
-	Multiclass      bool                   `yaml:"multiclass"`
-	TeamBased       bool                   `yaml:"teamBased"`
-	TeamPointsTopN  int32                  `yaml:"teamPointsTopN"`
-	SkipEvents      int32                  `yaml:"skipEvents"`
-	DefaultCarModel string                 `yaml:"defaultCarModel"`
-	DefaultJoinedAt string                 `yaml:"defaultJoinedAt"`
-	Drivers         []SeasonDriverConfig   `yaml:"drivers"`
-	Events          []EventConfig          `yaml:"events"`
-	Teams           []TeamConfig           `yaml:"teams"`
-	CarClasses      []SeasonCarClassConfig `yaml:"carClasses"`
-	CarModels       []SeasonCarModelConfig `yaml:"carModels"`
+	Name                   string                        `yaml:"name"`
+	PointSystem            string                        `yaml:"pointSystem"`
+	StartsAt               string                        `yaml:"startsAt"`
+	EndsAt                 string                        `yaml:"endsAt"`
+	HasTeams               bool                          `yaml:"hasTeams"`
+	Multiclass             bool                          `yaml:"multiclass"`
+	TeamBased              bool                          `yaml:"teamBased"`
+	TeamPointsTopN         int32                         `yaml:"teamPointsTopN"`
+	SkipEvents             int32                         `yaml:"skipEvents"`
+	DefaultCarModelVariant string                        `yaml:"defaultCarModelVariant"`
+	DefaultJoinedAt        string                        `yaml:"defaultJoinedAt"`
+	Drivers                []SeasonDriverConfig          `yaml:"drivers"`
+	Events                 []EventConfig                 `yaml:"events"`
+	Teams                  []TeamConfig                  `yaml:"teams"`
+	CarClasses             []SeasonCarClassConfig        `yaml:"carClasses"`
+	CarModelVariants       []SeasonCarModelVariantConfig `yaml:"carModelVariants"`
 }
 
 // SeasonCarClassConfig defines a car class under a season.
 type SeasonCarClassConfig struct {
 	Name string `yaml:"name"`
 }
-type SeasonCarModelConfig struct {
+type SeasonCarModelVariantConfig struct {
 	Name string `yaml:"name"`
 }
 type SeasonDriverConfig struct {
-	Name      string `yaml:"name"`
-	CarModel  string `yaml:"carModel"`
-	CarNumber string `yaml:"carNumber"`
-	JoinedAt  string `yaml:"joinedAt"`
-	LeftAt    string `yaml:"leftAt"`
+	Name            string `yaml:"name"`
+	CarModelVariant string `yaml:"carModelVariant"`
+	CarNumber       string `yaml:"carNumber"`
+	JoinedAt        string `yaml:"joinedAt"`
+	LeftAt          string `yaml:"leftAt"`
 }
 
 // TeamConfig defines a team under a season.
 type TeamConfig struct {
-	Name      string             `yaml:"name"`
-	CarModel  string             `yaml:"carModel"`
-	CarNumber string             `yaml:"carNumber"`
-	Drivers   []TeamDriverConfig `yaml:"drivers"`
-	JoinedAt  string             `yaml:"joinedAt"`
-	LeftAt    string             `yaml:"leftAt"`
+	Name            string             `yaml:"name"`
+	CarModelVariant string             `yaml:"carModelVariant"`
+	CarNumber       string             `yaml:"carNumber"`
+	Drivers         []TeamDriverConfig `yaml:"drivers"`
+	JoinedAt        string             `yaml:"joinedAt"`
+	LeftAt          string             `yaml:"leftAt"`
 }
 
 // TeamDriverConfig defines a driver under a team.
@@ -237,8 +237,8 @@ type LayoutConfig struct {
 
 // CarClassConfig defines a car class.
 type CarClassConfig struct {
-	Name   string                `yaml:"name"`
-	Models []CarClassModelConfig `yaml:"models"`
+	Name          string                `yaml:"name"`
+	ModelVariants []CarClassModelConfig `yaml:"modelVariants"`
 }
 type CarClassModelConfig struct {
 	Name string `yaml:"name"`

@@ -90,7 +90,7 @@ func TestPreviewCommand_WithRows(t *testing.T) {
 	row.SetId(1)
 	row.SetRaceGridId(2)
 	row.SetDriverId(3)
-	row.SetCarModelId(4)
+	row.SetCarModelVariantId(4)
 	row.SetFinishingPosition(1)
 	row.SetCompletedLaps(50)
 
