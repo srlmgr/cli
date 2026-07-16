@@ -223,9 +223,9 @@ func (r *setupRunner) ensureCarModelV2(
 	ctx context.Context, mfrID uint32, name string,
 ) (uint32, bool, error) {
 	return findOrCreate(ctx,
-		func(ctx context.Context) ([]*commonv1.CarModelV2, error) {
-			resp, err := r.qrySvc.ListCarModelsV2(ctx,
-				connect.NewRequest(&queryv1.ListCarModelsV2Request{
+		func(ctx context.Context) ([]*commonv1.CarModel, error) {
+			resp, err := r.qrySvc.ListCarModels(ctx,
+				connect.NewRequest(&queryv1.ListCarModelsRequest{
 					ManufacturerId: mfrID,
 				}),
 			)
@@ -235,11 +235,11 @@ func (r *setupRunner) ensureCarModelV2(
 
 			return resp.Msg.GetItems(), nil
 		},
-		func(b *commonv1.CarModelV2) bool { return b.GetName() == name },
-		func(b *commonv1.CarModelV2) uint32 { return b.GetId() },
+		func(b *commonv1.CarModel) bool { return b.GetName() == name },
+		func(b *commonv1.CarModel) uint32 { return b.GetId() },
 		func(ctx context.Context) (uint32, error) {
-			resp, err := r.cmdSvc.CreateCarModelV2(ctx,
-				connect.NewRequest(&commandv1.CreateCarModelV2Request{
+			resp, err := r.cmdSvc.CreateCarModel(ctx,
+				connect.NewRequest(&commandv1.CreateCarModelRequest{
 					ManufacturerId: mfrID,
 					Name:           name,
 				}),
@@ -254,12 +254,13 @@ func (r *setupRunner) ensureCarModelV2(
 	)
 }
 
-// ensureCarModel finds or creates a car model, scoped to both manufacturer and brand.
-// ListCarModels filters by manufacturer; brand-level scoping is applied in code.
+// ensureCarModelVariant finds or creates a car model variant,
+// scoped to both the car model.
+// ListCarModelVariants filters by car model; variant-level scoping is applied in code.
 //
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) ensureCarModelVariant(
-	ctx context.Context, mfrID, carModelID uint32, name string,
+	ctx context.Context, carModelID uint32, name string,
 ) (*commonv1.CarModelVariant, bool, error) {
 	return findOrCreateFull(ctx,
 		func(ctx context.Context) ([]*commonv1.CarModelVariant, error) {

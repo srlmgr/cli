@@ -90,7 +90,9 @@ func (c *previewCommand) run(ctx context.Context) error {
 	}
 
 	for _, row := range rows {
-		if _, err = fmt.Fprintf(c.out,
+		//nolint:lll // readability
+		if _, err = fmt.Fprintf(
+			c.out,
 			"  row: id=%d race_grid_id=%d driver_id=%d car_model_variant_id=%d position=%d laps=%d\n",
 			row.GetId(),
 			row.GetRaceGridId(),

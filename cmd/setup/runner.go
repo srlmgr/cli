@@ -296,7 +296,11 @@ func (r *setupRunner) setupSeasonList(
 		if err := r.setupSeasonCarClasses(ctx, snID, seasons[i].CarClasses); err != nil {
 			return fmt.Errorf("season %q car classes: %w", seasons[i].Name, err)
 		}
-		if err := r.setupSeasonCarModelVariants(ctx, snID, seasons[i].CarModelVariants); err != nil {
+		if err := r.setupSeasonCarModelVariants(
+			ctx,
+			snID,
+			seasons[i].CarModelVariants,
+		); err != nil {
 			return fmt.Errorf("season %q car models: %w", seasons[i].Name, err)
 		}
 
@@ -559,7 +563,7 @@ func (r *setupRunner) setupCarManufacturers(
 	return modelVariantIDs, nil
 }
 
-//nolint:whitespace,lll // editor/linter issue
+//nolint:whitespace // editor/linter issue
 func (r *setupRunner) setupModelList(
 	ctx context.Context,
 	mfrID uint32,
@@ -575,7 +579,12 @@ func (r *setupRunner) setupModelList(
 		if err := r.printResult("car-model", models[i].Name, model, created); err != nil {
 			return err
 		}
-		if err := r.setupModelVariants(ctx, mfrID, model, models[i].Variants, modelVariantIDs); err != nil {
+		if err := r.setupModelVariants(
+			ctx,
+			model,
+			models[i].Variants,
+			modelVariantIDs,
+		); err != nil {
 			return fmt.Errorf("car model %q variants: %w", models[i].Name, err)
 		}
 
@@ -587,22 +596,27 @@ func (r *setupRunner) setupModelList(
 //nolint:whitespace,lll // editor/linter issue
 func (r *setupRunner) setupModelVariants(
 	ctx context.Context,
-	mfrID, brandID uint32,
+	modelID uint32,
 	modelVariants []ModelVariantConfig,
 	modelVariantIDs map[string]uint32,
 ) error {
 	for i := range modelVariants {
-		modelID, created, err := r.ensureCarModelVariant(ctx, mfrID, brandID, modelVariants[i].Name)
+		modelVariant, created, err := r.ensureCarModelVariant(ctx, modelID, modelVariants[i].Name)
 		if err != nil {
 			return fmt.Errorf("car model %q: %w", modelVariants[i].Name, err)
 		}
 
-		if err := r.printResult("car-model", modelVariants[i].Name, modelID.GetId(), created); err != nil {
+		if err := r.printResult(
+			"car-model",
+			modelVariants[i].Name,
+			modelVariant.GetId(),
+			created,
+		); err != nil {
 			return err
 		}
 
-		r.carModelVariantLookup[modelVariants[i].Name] = modelID
-		modelVariantIDs[modelVariants[i].Name] = modelID.GetId()
+		r.carModelVariantLookup[modelVariants[i].Name] = modelVariant
+		modelVariantIDs[modelVariants[i].Name] = modelVariant.GetId()
 	}
 
 	return nil
@@ -861,59 +875,11 @@ func (r *setupRunner) setupCarModelVariantAliases(
 						)
 					}
 
-					if err := r.printAliasResult("car-model", modelVariant.Name, simCfg.Name); err != nil {
-						return err
-					}
-				}
-			}
-		}
-	}
-
-	return nil
-}
-
-// Deprecated: use setupCarModelVariantAliases instead
-//
-//nolint:whitespace,funlen // editor/linter issue
-func (r *setupRunner) setupCarModelAliases(
-	ctx context.Context,
-	mfrs []CarManufacturerConfig,
-	simIDs, modelIDs map[string]uint32,
-) error {
-	for i := range mfrs {
-		for j := range mfrs[i].Brands {
-			for k := range mfrs[i].Brands[j].Models {
-				model := &mfrs[i].Brands[j].Models[k]
-				modelID := modelIDs[model.Name]
-
-				for l := range model.Simulations {
-					simCfg := &model.Simulations[l]
-					if len(simCfg.Aliases) == 0 {
-						continue
-					}
-
-					simID, ok := simIDs[simCfg.Name]
-					if !ok {
-						return fmt.Errorf(
-							"car model %q: simulation %q not found; ensure it is defined under simulations",
-							model.Name,
-							simCfg.Name,
-						)
-					}
-
-					if err := r.setSimulationCarAliases(
-						ctx,
-						modelID,
-						simID,
-						simCfg.Aliases,
+					if err := r.printAliasResult(
+						"car-model",
+						modelVariant.Name,
+						simCfg.Name,
 					); err != nil {
-						return fmt.Errorf(
-							"car model %q simulation %q aliases: %w",
-							model.Name, simCfg.Name, err,
-						)
-					}
-
-					if err := r.printAliasResult("car-model", model.Name, simCfg.Name); err != nil {
 						return err
 					}
 				}
