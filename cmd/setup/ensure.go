@@ -785,6 +785,8 @@ func (r *setupRunner) setSeasonDrivers(
 			JoinedAt:          timestamppb.New(joinedAt),
 			CarModelVariantId: cm.Id,
 			CarNumber:         drivers[i].CarNumber,
+			IsGuestDriver:     drivers[i].Guest,
+			IsRookieDriver:    drivers[i].Rookie,
 		}
 		if leftAt != nil {
 			members[i].LeftAt = timestamppb.New(*leftAt)

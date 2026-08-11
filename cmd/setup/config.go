@@ -118,6 +118,8 @@ type SeasonDriverConfig struct {
 	Name            string `yaml:"name"`
 	CarModelVariant string `yaml:"carModelVariant"`
 	CarNumber       string `yaml:"carNumber"`
+	Guest           bool   `yaml:"guest"`
+	Rookie          bool   `yaml:"rookie"`
 	JoinedAt        string `yaml:"joinedAt"`
 	LeftAt          string `yaml:"leftAt"`
 }

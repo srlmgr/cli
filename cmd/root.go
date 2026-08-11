@@ -126,7 +126,7 @@ func init() {
 		"if true, don't log fields that contain a context.Context")
 	rootCmd.PersistentFlags().StringVar(&config.APIAddr,
 		"api-addr",
-		"http://localhost:8080",
+		"http://localhost:8190",
 		"base URL of the backend ConnectRPC API")
 	rootCmd.PersistentFlags().StringVar(&config.APIToken,
 		"api-token",
