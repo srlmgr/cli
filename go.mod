@@ -3,8 +3,8 @@ module github.com/srlmgr/cli
 go 1.26
 
 require (
-	buf.build/gen/go/srlmgr/api/connectrpc/go v1.20.0-20260810091025-970f5245786b.1
-	buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.11-20260810091025-970f5245786b.1
+	buf.build/gen/go/srlmgr/api/connectrpc/go v1.20.0-20260820080050-ff8869bcbfb1.1
+	buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.12-20260820080050-ff8869bcbfb1.1
 	connectrpc.com/connect v1.20.0
 	github.com/samber/lo v1.53.0
 	github.com/spf13/cobra v1.10.2
@@ -26,7 +26,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.44.0
 	go.uber.org/zap v1.28.0
 	google.golang.org/grpc v1.82.1
-	google.golang.org/protobuf v1.36.11
+	google.golang.org/protobuf v1.36.12
 	gopkg.in/yaml.v3 v3.0.1
 	moul.io/zapfilter v1.7.0
 )

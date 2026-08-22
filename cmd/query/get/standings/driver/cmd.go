@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 
+	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
@@ -12,11 +13,13 @@ import (
 	"github.com/srlmgr/cli/cmd/config"
 	"github.com/srlmgr/cli/cmd/query/client"
 	"github.com/srlmgr/cli/cmd/query/output"
+	"github.com/srlmgr/cli/conversion"
 	"github.com/srlmgr/cli/log"
 )
 
 func NewCmd() *cobra.Command {
 	var outputFormat string
+	var skipMode string
 
 	cmd := &cobra.Command{
 		Use:   "driver",
@@ -33,6 +36,7 @@ func NewCmd() *cobra.Command {
 				apiToken:     config.APIToken,
 				eventID:      eventID,
 				outputFormat: outputFormat,
+				skipMode:     skipMode,
 				out:          cmd.OutOrStdout(),
 			}
 			return runner.run(cmd.Context())
@@ -48,6 +52,11 @@ func NewCmd() *cobra.Command {
 		"o",
 		"table",
 		"Output format (table or json)")
+	cmd.Flags().StringVarP(&skipMode,
+		"skip-mode",
+		"s",
+		"never",
+		"Skip mode (never, always, when-applicable)")
 	return cmd
 }
 
@@ -56,9 +65,11 @@ type getDriverStandingsCommand struct {
 	apiToken     string
 	eventID      uint32
 	outputFormat string
+	skipMode     string
 	out          io.Writer
 }
 
+//nolint:funlen // lot of things to do
 func (c *getDriverStandingsCommand) run(ctx context.Context) error {
 	logger := log.GetFromContext(ctx).Named("rpc")
 	svc := client.NewQueryServiceClient(c.apiBaseURL, logger)
@@ -68,6 +79,13 @@ func (c *getDriverStandingsCommand) run(ctx context.Context) error {
 		ctx,
 		connect.NewRequest(&queryv1.GetDriverStandingsRequest{
 			EventId: c.eventID,
+			SkipMode: func() commonv1.SkipMode {
+				skipMode, err := conversion.ParseSkipMode(c.skipMode)
+				if err != nil {
+					panic(err)
+				}
+				return skipMode
+			}(),
 		}),
 	)
 	if err != nil {

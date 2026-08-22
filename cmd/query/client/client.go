@@ -28,6 +28,23 @@ func NewQueryServiceClient(
 	)
 }
 
+// NewStandingsServiceClient creates a new authenticated StandingsService client.
+//
+//nolint:whitespace // editor/linter issue
+func NewStandingsServiceClient(
+	apiBaseURL string,
+	logger *log.Logger,
+) queryv1connect.StandingsServiceClient {
+	return queryv1connect.NewStandingsServiceClient(
+		http.DefaultClient,
+		normalizeAPIBaseURL(apiBaseURL),
+		connect.WithGRPC(),
+		connect.WithInterceptors(
+			rpc.NewTraceIDInterceptor(logger),
+		),
+	)
+}
+
 func normalizeAPIBaseURL(baseURL string) string {
 	url := strings.TrimSpace(baseURL)
 	if url == "" {

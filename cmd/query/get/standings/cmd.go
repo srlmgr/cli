@@ -3,6 +3,7 @@ package standings
 import (
 	"github.com/spf13/cobra"
 
+	"github.com/srlmgr/cli/cmd/query/get/standings/combined"
 	"github.com/srlmgr/cli/cmd/query/get/standings/driver"
 	"github.com/srlmgr/cli/cmd/query/get/standings/team"
 )
@@ -17,5 +18,6 @@ func NewCmd() *cobra.Command {
 
 	cmd.AddCommand(driver.NewCmd())
 	cmd.AddCommand(team.NewCmd())
+	cmd.AddCommand(combined.NewCmd())
 	return cmd
 }
