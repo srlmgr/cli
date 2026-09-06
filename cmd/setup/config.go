@@ -94,6 +94,7 @@ type SeasonConfig struct {
 	StartsAt               string                        `yaml:"startsAt"`
 	EndsAt                 string                        `yaml:"endsAt"`
 	HasTeams               bool                          `yaml:"hasTeams"`
+	NumGrids               int32                         `yaml:"numGrids"`
 	Multiclass             bool                          `yaml:"multiclass"`
 	TeamBased              bool                          `yaml:"teamBased"`
 	TeamPointsTopN         int32                         `yaml:"teamPointsTopN"`
@@ -149,6 +150,7 @@ type EventConfig struct {
 	Date            string                     `yaml:"date"`
 	Status          EventStatusConfig          `yaml:"status"`
 	ProcessingState EventProcessingStateConfig `yaml:"processingState"`
+	PointSystem     string                     `yaml:"pointSystem"`
 	Races           []RaceConfig               `yaml:"races"`
 }
 

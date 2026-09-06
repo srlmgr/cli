@@ -1,3 +1,4 @@
+//nolint:dupl // prevent false positives
 package setup
 
 import (
@@ -19,6 +20,7 @@ type setupRunner struct {
 	carModelVariantLookup map[string]*commonv1.CarModelVariant
 
 	carClassLookup map[string]*commonv1.CarClass
+	psIDs          map[string]uint32
 }
 
 // run loads the config and provisions all entities in the required order.
@@ -40,7 +42,7 @@ func (r *setupRunner) run(ctx context.Context) error {
 		return fmt.Errorf("setup drivers: %w", err)
 	}
 
-	psIDs, err := r.setupPointSystems(ctx, cfg.PointSystems)
+	r.psIDs, err = r.setupPointSystems(ctx, cfg.PointSystems)
 	if err != nil {
 		return fmt.Errorf("setup point systems: %w", err)
 	}
@@ -74,7 +76,7 @@ func (r *setupRunner) run(ctx context.Context) error {
 		return fmt.Errorf("setup aliases: %w", err)
 	}
 
-	_, err = r.setupSimulations(ctx, cfg.Simulations, psIDs, layoutIDs)
+	_, err = r.setupSimulations(ctx, cfg.Simulations, layoutIDs)
 	if err != nil {
 		return fmt.Errorf("setup simulations: %w", err)
 	}
@@ -127,6 +129,7 @@ func (r *setupRunner) setupPointSystems(
 		}
 
 		ids[ps.Name] = id
+
 	}
 
 	return ids, nil
@@ -174,7 +177,7 @@ func (r *setupRunner) setupSimulationsBase(
 func (r *setupRunner) setupSimulations(
 	ctx context.Context,
 	sims []SimulationConfig,
-	psIDs map[string]uint32,
+
 	layoutIDs map[string]uint32,
 ) (map[string]uint32, error) {
 	simIDs := make(map[string]uint32, len(sims))
@@ -209,8 +212,9 @@ func (r *setupRunner) setupSimulations(
 			ctx,
 			simID,
 			sims[i].Series,
-			psIDs,
-			layoutIDs); err != nil {
+
+			layoutIDs,
+		); err != nil {
 			return nil, fmt.Errorf("simulation %q series: %w", sims[i].Name, err)
 		}
 	}
@@ -223,7 +227,7 @@ func (r *setupRunner) setupSeriesList(
 	ctx context.Context,
 	simID uint32,
 	series []SeriesConfig,
-	psIDs map[string]uint32,
+
 	layoutIDs map[string]uint32,
 ) error {
 	for i := range series {
@@ -240,7 +244,7 @@ func (r *setupRunner) setupSeriesList(
 			ctx,
 			srID,
 			series[i].Seasons,
-			psIDs,
+
 			layoutIDs,
 		); err != nil {
 			return fmt.Errorf("series %q seasons: %w", series[i].Name, err)
@@ -255,11 +259,11 @@ func (r *setupRunner) setupSeasonList(
 	ctx context.Context,
 	seriesID uint32,
 	seasons []SeasonConfig,
-	psIDs map[string]uint32,
+
 	layoutIDs map[string]uint32,
 ) error {
 	for i := range seasons {
-		psID := psIDs[seasons[i].PointSystem]
+		psID := r.psIDs[seasons[i].PointSystem]
 
 		snID, created, err := r.ensureSeason(ctx, seriesID, psID, &seasons[i])
 		if err != nil {
@@ -290,7 +294,8 @@ func (r *setupRunner) setupSeasonList(
 		if err := r.setupTeamList(ctx, snID, seasons[i].Teams, useDefaultJoinedAt); err != nil {
 			return fmt.Errorf("season %q teams: %w", seasons[i].Name, err)
 		}
-		if err := r.setupEventList(ctx, snID, seasons[i].Events, layoutIDs); err != nil {
+		//nolint:lll // readability
+		if err := r.setupEventList(ctx, snID, psID, seasons[i].Events, layoutIDs); err != nil {
 			return fmt.Errorf("season %q events: %w", seasons[i].Name, err)
 		}
 		if err := r.setupSeasonCarClasses(ctx, snID, seasons[i].CarClasses); err != nil {
@@ -389,7 +394,8 @@ func (r *setupRunner) setupTeamList(
 		}
 		memberDefaultJoinedAt := teams[i].JoinedAt
 		if err := r.setupTeamMembers(
-			ctx, tmID, teams[i].Drivers, memberDefaultJoinedAt); err != nil {
+			ctx, tmID, teams[i].Drivers, memberDefaultJoinedAt,
+		); err != nil {
 			return fmt.Errorf("team %q members: %w", teams[i].Name, err)
 		}
 	}
@@ -417,7 +423,7 @@ func (r *setupRunner) setupTeamMembers(
 //nolint:whitespace // editor/linter issue
 func (r *setupRunner) setupEventList(
 	ctx context.Context,
-	seasonID uint32,
+	seasonID, defaultPSID uint32,
 	events []EventConfig,
 	layoutIDs map[string]uint32,
 ) error {
@@ -430,10 +436,21 @@ func (r *setupRunner) setupEventList(
 				)
 			}
 		}
+		psID := defaultPSID
+		if events[i].PointSystem != "" {
+			var ok bool
+			psID, ok = r.psIDs[events[i].PointSystem]
+			if !ok {
+				return fmt.Errorf(
+					"event %q: point system %q not found; ensure it is defined under point systems",
+					events[i].Name, events[i].PointSystem,
+				)
+			}
+		}
 
 		layoutID := layoutIDs[events[i].TrackLayout]
 
-		evID, created, err := r.ensureEvent(ctx, seasonID, layoutID, &events[i])
+		evID, created, err := r.ensureEvent(ctx, seasonID, layoutID, psID, &events[i])
 		if err != nil {
 			return fmt.Errorf("event %q: %w", events[i].Name, err)
 		}
@@ -487,7 +504,8 @@ func (r *setupRunner) setupSeasonCarModelVariants(
 		toSetCarModelVariants = append(toSetCarModelVariants, carModelVariant.GetId())
 	}
 	if err := r.setSeasonCarModelVariants(
-		ctx, seasonID, toSetCarModelVariants); err != nil {
+		ctx, seasonID, toSetCarModelVariants,
+	); err != nil {
 		return fmt.Errorf("set season car model variants: %w", err)
 	}
 

@@ -23,9 +23,11 @@ func (r *setupRunner) ensurePointSystem(
 		return 0, false, fmt.Errorf("build point system request: %w", err)
 	}
 
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.PointSystem, error) {
-			resp, err := r.qrySvc.ListPointSystems(ctx,
+			resp, err := r.qrySvc.ListPointSystems(
+				ctx,
 				connect.NewRequest(&queryv1.ListPointSystemsRequest{}),
 			)
 			if err != nil {
@@ -37,7 +39,8 @@ func (r *setupRunner) ensurePointSystem(
 		func(p *commonv1.PointSystem) bool { return p.GetName() == cfg.Name },
 		func(p *commonv1.PointSystem) uint32 { return p.GetId() },
 		func(ctx context.Context) (uint32, error) {
-			resp, err := r.cmdSvc.CreatePointSystem(ctx,
+			resp, err := r.cmdSvc.CreatePointSystem(
+				ctx,
 				connect.NewRequest(req),
 			)
 			if err != nil {
@@ -57,9 +60,11 @@ func (r *setupRunner) ensureSimulation(
 	isActive bool,
 	supportedFormats []*commonv1.ImportConfig,
 ) (uint32, bool, error) {
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.Simulation, error) {
-			resp, err := r.qrySvc.ListSimulations(ctx,
+			resp, err := r.qrySvc.ListSimulations(
+				ctx,
 				connect.NewRequest(&queryv1.ListSimulationsRequest{}),
 			)
 			if err != nil {
@@ -71,7 +76,8 @@ func (r *setupRunner) ensureSimulation(
 		func(s *commonv1.Simulation) bool { return s.GetName() == name },
 		func(s *commonv1.Simulation) uint32 { return s.GetId() },
 		func(ctx context.Context) (uint32, error) {
-			resp, err := r.cmdSvc.CreateSimulation(ctx,
+			resp, err := r.cmdSvc.CreateSimulation(
+				ctx,
 				connect.NewRequest(&commandv1.CreateSimulationRequest{
 					Name:             name,
 					IsActive:         isActive,
@@ -92,9 +98,11 @@ func (r *setupRunner) ensureSimulation(
 func (r *setupRunner) ensureSeries(
 	ctx context.Context, simID uint32, name string,
 ) (uint32, bool, error) {
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.Series, error) {
-			resp, err := r.qrySvc.ListSeries(ctx,
+			resp, err := r.qrySvc.ListSeries(
+				ctx,
 				connect.NewRequest(&queryv1.ListSeriesRequest{
 					SimulationId: simID,
 				}),
@@ -108,7 +116,8 @@ func (r *setupRunner) ensureSeries(
 		func(s *commonv1.Series) bool { return s.GetName() == name },
 		func(s *commonv1.Series) uint32 { return s.GetId() },
 		func(ctx context.Context) (uint32, error) {
-			resp, err := r.cmdSvc.CreateSeries(ctx,
+			resp, err := r.cmdSvc.CreateSeries(
+				ctx,
 				connect.NewRequest(&commandv1.CreateSeriesRequest{
 					SimulationId: simID,
 					Name:         name,
@@ -128,9 +137,11 @@ func (r *setupRunner) ensureSeries(
 func (r *setupRunner) ensureSeason(
 	ctx context.Context, seriesID, psID uint32, sCfg *SeasonConfig,
 ) (uint32, bool, error) {
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.Season, error) {
-			resp, err := r.qrySvc.ListSeasons(ctx,
+			resp, err := r.qrySvc.ListSeasons(
+				ctx,
 				connect.NewRequest(&queryv1.ListSeasonsRequest{
 					SeriesId: seriesID,
 				}),
@@ -148,6 +159,7 @@ func (r *setupRunner) ensureSeason(
 				SeriesId:       seriesID,
 				Name:           sCfg.Name,
 				HasTeams:       sCfg.HasTeams,
+				NumGrids:       sCfg.NumGrids,
 				IsMulticlass:   sCfg.Multiclass,
 				IsTeamBased:    sCfg.TeamBased,
 				TeamPointsTopN: sCfg.TeamPointsTopN,
@@ -172,7 +184,8 @@ func (r *setupRunner) ensureSeason(
 				req.EndsAt = timestamppb.New(endsAt)
 			}
 
-			resp, err := r.cmdSvc.CreateSeason(ctx,
+			resp, err := r.cmdSvc.CreateSeason(
+				ctx,
 				connect.NewRequest(req),
 			)
 			if err != nil {
@@ -189,9 +202,11 @@ func (r *setupRunner) ensureSeason(
 func (r *setupRunner) ensureCarManufacturer(
 	ctx context.Context, name string,
 ) (uint32, bool, error) {
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.CarManufacturer, error) {
-			resp, err := r.qrySvc.ListCarManufacturers(ctx,
+			resp, err := r.qrySvc.ListCarManufacturers(
+				ctx,
 				connect.NewRequest(&queryv1.ListCarManufacturersRequest{}),
 			)
 			if err != nil {
@@ -203,7 +218,8 @@ func (r *setupRunner) ensureCarManufacturer(
 		func(m *commonv1.CarManufacturer) bool { return m.GetName() == name },
 		func(m *commonv1.CarManufacturer) uint32 { return m.GetId() },
 		func(ctx context.Context) (uint32, error) {
-			resp, err := r.cmdSvc.CreateCarManufacturer(ctx,
+			resp, err := r.cmdSvc.CreateCarManufacturer(
+				ctx,
 				connect.NewRequest(&commandv1.CreateCarManufacturerRequest{
 					Name: name,
 				}),
@@ -222,9 +238,11 @@ func (r *setupRunner) ensureCarManufacturer(
 func (r *setupRunner) ensureCarModelV2(
 	ctx context.Context, mfrID uint32, name string,
 ) (uint32, bool, error) {
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.CarModel, error) {
-			resp, err := r.qrySvc.ListCarModels(ctx,
+			resp, err := r.qrySvc.ListCarModels(
+				ctx,
 				connect.NewRequest(&queryv1.ListCarModelsRequest{
 					ManufacturerId: mfrID,
 				}),
@@ -238,7 +256,8 @@ func (r *setupRunner) ensureCarModelV2(
 		func(b *commonv1.CarModel) bool { return b.GetName() == name },
 		func(b *commonv1.CarModel) uint32 { return b.GetId() },
 		func(ctx context.Context) (uint32, error) {
-			resp, err := r.cmdSvc.CreateCarModel(ctx,
+			resp, err := r.cmdSvc.CreateCarModel(
+				ctx,
 				connect.NewRequest(&commandv1.CreateCarModelRequest{
 					ManufacturerId: mfrID,
 					Name:           name,
@@ -262,9 +281,11 @@ func (r *setupRunner) ensureCarModelV2(
 func (r *setupRunner) ensureCarModelVariant(
 	ctx context.Context, carModelID uint32, name string,
 ) (*commonv1.CarModelVariant, bool, error) {
-	return findOrCreateFull(ctx,
+	return findOrCreateFull(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.CarModelVariant, error) {
-			resp, err := r.qrySvc.ListCarModelVariants(ctx,
+			resp, err := r.qrySvc.ListCarModelVariants(
+				ctx,
 				connect.NewRequest(&queryv1.ListCarModelVariantsRequest{
 					ModelId: carModelID,
 				}),
@@ -280,7 +301,8 @@ func (r *setupRunner) ensureCarModelVariant(
 		},
 
 		func(ctx context.Context) (*commonv1.CarModelVariant, error) {
-			resp, err := r.cmdSvc.CreateCarModelVariant(ctx,
+			resp, err := r.cmdSvc.CreateCarModelVariant(
+				ctx,
 				connect.NewRequest(&commandv1.CreateCarModelVariantRequest{
 					ModelId: carModelID,
 					Name:    name,
@@ -300,9 +322,11 @@ func (r *setupRunner) ensureCarModelVariant(
 func (r *setupRunner) ensureCarClass(
 	ctx context.Context, name string,
 ) (*commonv1.CarClass, bool, error) {
-	return findOrCreateFull(ctx,
+	return findOrCreateFull(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.CarClass, error) {
-			resp, err := r.qrySvc.ListCarClasses(ctx,
+			resp, err := r.qrySvc.ListCarClasses(
+				ctx,
 				connect.NewRequest(&queryv1.ListCarClassesRequest{}),
 			)
 			if err != nil {
@@ -313,7 +337,8 @@ func (r *setupRunner) ensureCarClass(
 		},
 		func(c *commonv1.CarClass) bool { return c.GetName() == name },
 		func(ctx context.Context) (*commonv1.CarClass, error) {
-			resp, err := r.cmdSvc.CreateCarClass(ctx,
+			resp, err := r.cmdSvc.CreateCarClass(
+				ctx,
 				connect.NewRequest(&commandv1.CreateCarClassRequest{
 					Name: name,
 				}),
@@ -382,9 +407,11 @@ func (r *setupRunner) setSeasonCarClasses(
 func (r *setupRunner) ensureTrack(
 	ctx context.Context, name string,
 ) (uint32, bool, error) {
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.Track, error) {
-			resp, err := r.qrySvc.ListTracks(ctx,
+			resp, err := r.qrySvc.ListTracks(
+				ctx,
 				connect.NewRequest(&queryv1.ListTracksRequest{}),
 			)
 			if err != nil {
@@ -396,7 +423,8 @@ func (r *setupRunner) ensureTrack(
 		func(t *commonv1.Track) bool { return t.GetName() == name },
 		func(t *commonv1.Track) uint32 { return t.GetId() },
 		func(ctx context.Context) (uint32, error) {
-			resp, err := r.cmdSvc.CreateTrack(ctx,
+			resp, err := r.cmdSvc.CreateTrack(
+				ctx,
 				connect.NewRequest(&commandv1.CreateTrackRequest{
 					Name: name,
 				}),
@@ -415,9 +443,11 @@ func (r *setupRunner) ensureTrack(
 func (r *setupRunner) ensureTrackLayout(
 	ctx context.Context, trackID uint32, name string,
 ) (uint32, bool, error) {
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.TrackLayout, error) {
-			resp, err := r.qrySvc.ListTrackLayouts(ctx,
+			resp, err := r.qrySvc.ListTrackLayouts(
+				ctx,
 				connect.NewRequest(&queryv1.ListTrackLayoutsRequest{
 					TrackId: trackID,
 				}),
@@ -431,7 +461,8 @@ func (r *setupRunner) ensureTrackLayout(
 		func(l *commonv1.TrackLayout) bool { return l.GetName() == name },
 		func(l *commonv1.TrackLayout) uint32 { return l.GetId() },
 		func(ctx context.Context) (uint32, error) {
-			resp, err := r.cmdSvc.CreateTrackLayout(ctx,
+			resp, err := r.cmdSvc.CreateTrackLayout(
+				ctx,
 				connect.NewRequest(&commandv1.CreateTrackLayoutRequest{
 					TrackId: trackID,
 					Name:    name,
@@ -451,9 +482,11 @@ func (r *setupRunner) ensureTrackLayout(
 func (r *setupRunner) ensureDriver(
 	ctx context.Context, cfg DriverConfig,
 ) (*commonv1.Driver, bool, error) {
-	return findOrCreateFull(ctx,
+	return findOrCreateFull(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.Driver, error) {
-			resp, err := r.qrySvc.ListDrivers(ctx,
+			resp, err := r.qrySvc.ListDrivers(
+				ctx,
 				connect.NewRequest(&queryv1.ListDriversRequest{}),
 			)
 			if err != nil {
@@ -464,7 +497,8 @@ func (r *setupRunner) ensureDriver(
 		},
 		func(d *commonv1.Driver) bool { return d.GetName() == cfg.Name },
 		func(ctx context.Context) (*commonv1.Driver, error) {
-			resp, err := r.cmdSvc.CreateDriver(ctx,
+			resp, err := r.cmdSvc.CreateDriver(
+				ctx,
 				connect.NewRequest(&commandv1.CreateDriverRequest{
 					Name:       cfg.Name,
 					ExternalId: cfg.ExternalID,
@@ -485,9 +519,11 @@ func (r *setupRunner) ensureDriver(
 func (r *setupRunner) ensureTeam(
 	ctx context.Context, seasonID uint32, cfg *TeamConfig,
 ) (uint32, bool, error) {
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.Team, error) {
-			resp, err := r.qrySvc.ListTeams(ctx,
+			resp, err := r.qrySvc.ListTeams(
+				ctx,
 				connect.NewRequest(&queryv1.ListTeamsRequest{
 					SeasonId: seasonID,
 				}),
@@ -542,15 +578,17 @@ func (r *setupRunner) ensureTeam(
 
 //nolint:whitespace,funlen // editor/linter issue,much to do
 func (r *setupRunner) ensureEvent(
-	ctx context.Context, seasonID, trackLayoutID uint32, cfg *EventConfig,
+	ctx context.Context, seasonID, trackLayoutID, psID uint32, cfg *EventConfig,
 ) (uint32, bool, error) {
 	if cfg == nil {
 		return 0, false, fmt.Errorf("event config is nil")
 	}
 
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.Event, error) {
-			resp, err := r.qrySvc.ListEvents(ctx,
+			resp, err := r.qrySvc.ListEvents(
+				ctx,
 				connect.NewRequest(&queryv1.ListEventsRequest{
 					SeasonId: seasonID,
 				}),
@@ -581,6 +619,7 @@ func (r *setupRunner) ensureEvent(
 				SequenceNo:      cfg.SequenceNo,
 				Status:          status,
 				ProcessingState: processingState,
+				PointSystemId:   psID,
 			}
 
 			if cfg.Date != "" {
@@ -607,9 +646,11 @@ func (r *setupRunner) ensureEvent(
 func (r *setupRunner) ensureRace(
 	ctx context.Context, eventID uint32, cfg RaceConfig,
 ) (uint32, bool, error) {
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.Race, error) {
-			resp, err := r.qrySvc.ListRaces(ctx,
+			resp, err := r.qrySvc.ListRaces(
+				ctx,
 				connect.NewRequest(&queryv1.ListRacesRequest{
 					EventId: eventID,
 				}),
@@ -631,7 +672,8 @@ func (r *setupRunner) ensureRace(
 				)
 			}
 
-			resp, err := r.cmdSvc.CreateRace(ctx,
+			resp, err := r.cmdSvc.CreateRace(
+				ctx,
 				connect.NewRequest(&commandv1.CreateRaceRequest{
 					EventId:     eventID,
 					Name:        cfg.Name,
@@ -653,9 +695,11 @@ func (r *setupRunner) ensureRace(
 func (r *setupRunner) ensureRaceGrid(
 	ctx context.Context, raceID uint32, cfg RaceGridConfig,
 ) (uint32, bool, error) {
-	return findOrCreate(ctx,
+	return findOrCreate(
+		ctx,
 		func(ctx context.Context) ([]*commonv1.RaceGrid, error) {
-			resp, err := r.qrySvc.ListRaceGrids(ctx,
+			resp, err := r.qrySvc.ListRaceGrids(
+				ctx,
 				connect.NewRequest(&queryv1.ListRaceGridsRequest{
 					RaceId: raceID,
 				}),
@@ -677,7 +721,8 @@ func (r *setupRunner) ensureRaceGrid(
 				)
 			}
 
-			resp, err := r.cmdSvc.CreateRaceGrid(ctx,
+			resp, err := r.cmdSvc.CreateRaceGrid(
+				ctx,
 				connect.NewRequest(&commandv1.CreateRaceGridRequest{
 					RaceId:      raceID,
 					Name:        cfg.Name,
@@ -695,7 +740,7 @@ func (r *setupRunner) ensureRaceGrid(
 	)
 }
 
-//nolint:whitespace // editor/linter issue
+//nolint:whitespace,funlen // editor/linter issue
 func (r *setupRunner) setTeamMembers(
 	ctx context.Context, teamID uint32, drivers []TeamDriverConfig,
 ) error {
@@ -731,7 +776,8 @@ func (r *setupRunner) setTeamMembers(
 		}
 	}
 
-	_, err := r.cmdSvc.SetTeamMembers(ctx,
+	_, err := r.cmdSvc.SetTeamMembers(
+		ctx,
 		connect.NewRequest(&commandv1.SetTeamMembersRequest{
 			TeamId:  teamID,
 			Members: members,
@@ -793,7 +839,8 @@ func (r *setupRunner) setSeasonDrivers(
 		}
 	}
 
-	_, err := r.cmdSvc.SetSeasonDrivers(ctx,
+	_, err := r.cmdSvc.SetSeasonDrivers(
+		ctx,
 		connect.NewRequest(&commandv1.SetSeasonDriversRequest{
 			SeasonId: seasonID,
 			Drivers:  members,
@@ -814,7 +861,8 @@ func (r *setupRunner) setSimulationDriverAliases(
 		return nil
 	}
 
-	_, err := r.cmdSvc.SetSimulationDriverAliases(ctx,
+	_, err := r.cmdSvc.SetSimulationDriverAliases(
+		ctx,
 		connect.NewRequest(&commandv1.SetSimulationDriverAliasesRequest{
 			DriverId:           driverID,
 			SimulationId:       simID,
@@ -836,7 +884,8 @@ func (r *setupRunner) setSimulationCarAliases(
 		return nil
 	}
 
-	_, err := r.cmdSvc.SetSimulationCarAliases(ctx,
+	_, err := r.cmdSvc.SetSimulationCarAliases(
+		ctx,
 		connect.NewRequest(&commandv1.SetSimulationCarAliasesRequest{
 			CarModelVariantId: carModelVariantID,
 			SimulationId:      simID,
@@ -858,7 +907,8 @@ func (r *setupRunner) setSimulationTrackLayoutAliases(
 		return nil
 	}
 
-	_, err := r.cmdSvc.SetSimulationTrackLayoutAliases(ctx,
+	_, err := r.cmdSvc.SetSimulationTrackLayoutAliases(
+		ctx,
 		connect.NewRequest(&commandv1.SetSimulationTrackLayoutAliasesRequest{
 			TrackLayoutId: layoutID,
 			SimulationId:  simID,
