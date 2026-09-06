@@ -395,10 +395,12 @@ func (r *setupRunner) setSeasonCarClasses(
 	if r.dryRun {
 		return nil
 	}
+	//nolint:lll // readability
 	_, err := r.cmdSvc.SetSeasonCarClasses(ctx,
 		connect.NewRequest(&commandv1.SetSeasonCarClassesRequest{
 			SeasonId:    seasonID,
 			CarClassIds: carClassesIDs,
+			UpdateMode:  commandv1.SeasonCarModelsUpdateMode_SEASON_CAR_MODELS_UPDATE_MODE_REPLACE,
 		}))
 	return err
 }

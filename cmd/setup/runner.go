@@ -301,12 +301,14 @@ func (r *setupRunner) setupSeasonList(
 		if err := r.setupSeasonCarClasses(ctx, snID, seasons[i].CarClasses); err != nil {
 			return fmt.Errorf("season %q car classes: %w", seasons[i].Name, err)
 		}
-		if err := r.setupSeasonCarModelVariants(
-			ctx,
-			snID,
-			seasons[i].CarModelVariants,
-		); err != nil {
-			return fmt.Errorf("season %q car models: %w", seasons[i].Name, err)
+		if len(seasons[i].CarModelVariants) > 0 {
+			if err := r.setupSeasonCarModelVariants(
+				ctx,
+				snID,
+				seasons[i].CarModelVariants,
+			); err != nil {
+				return fmt.Errorf("season %q car models: %w", seasons[i].Name, err)
+			}
 		}
 
 	}
