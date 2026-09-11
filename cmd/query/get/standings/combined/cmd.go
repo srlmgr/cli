@@ -131,7 +131,8 @@ func (c *getCombinedStandingsCommand) run(ctx context.Context) error {
 
 	formatter := output.NewPrimaryStandingsFormatter()
 	return formatter.FormatPrimaryStandings(
-		c.out, c.outputFormat, standingsResp.Msg, primaryResolver)
+		c.out, c.outputFormat, standingsResp.Msg, primaryResolver,
+	)
 }
 
 //nolint:whitespace // readability

@@ -119,5 +119,6 @@ func (c *getDriverStandingsCommand) run(ctx context.Context) error {
 
 	formatter := output.NewDriverStandingsFormatter()
 	return formatter.FormatDriverStandings(
-		c.out, c.outputFormat, standingsResp.Msg, driversResp)
+		c.out, c.outputFormat, standingsResp.Msg, driversResp,
+	)
 }
