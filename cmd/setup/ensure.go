@@ -159,6 +159,7 @@ func (r *setupRunner) ensureSeason(
 				SeriesId:       seriesID,
 				Name:           sCfg.Name,
 				HasTeams:       sCfg.HasTeams,
+				NumRaces:       sCfg.NumRaces,
 				NumGrids:       sCfg.NumGrids,
 				IsMulticlass:   sCfg.Multiclass,
 				IsTeamBased:    sCfg.TeamBased,

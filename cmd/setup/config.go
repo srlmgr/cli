@@ -94,6 +94,7 @@ type SeasonConfig struct {
 	StartsAt               string                        `yaml:"startsAt"`
 	EndsAt                 string                        `yaml:"endsAt"`
 	HasTeams               bool                          `yaml:"hasTeams"`
+	NumRaces               int32                         `yaml:"numRaces"`
 	NumGrids               int32                         `yaml:"numGrids"`
 	Multiclass             bool                          `yaml:"multiclass"`
 	TeamBased              bool                          `yaml:"teamBased"`
