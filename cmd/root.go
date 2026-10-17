@@ -133,10 +133,6 @@ func init() {
 		"",
 		"API token for API authentication")
 
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
-
 	rootCmd.AddCommand(
 		admincmd.NewCmd(),
 		commandcmd.NewCmd(),
@@ -144,6 +140,7 @@ func init() {
 		querycmd.NewCmd(),
 		setupcmd.NewCmd(),
 	)
+	rootCmd.SilenceUsage = true
 }
 
 // initConfig reads in config file and ENV variables if set.

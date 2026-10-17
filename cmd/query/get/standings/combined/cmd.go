@@ -15,6 +15,7 @@ import (
 	"github.com/srlmgr/cli/cmd/config"
 	"github.com/srlmgr/cli/cmd/query/client"
 	"github.com/srlmgr/cli/cmd/query/output"
+	"github.com/srlmgr/cli/cmd/support"
 	"github.com/srlmgr/cli/conversion"
 	"github.com/srlmgr/cli/log"
 )
@@ -23,20 +24,24 @@ func NewCmd() *cobra.Command {
 	var outputFormat string
 	var skipMode string
 
+	var r *support.Resolve
 	cmd := &cobra.Command{
 		Use:   "combined",
 		Short: "Get combined standings (driver and team)",
 		Long:  "Fetch combined standings from backend.query.v1.QueryService.GetStandings",
+
 		RunE: func(cmd *cobra.Command, args []string) error {
-			eventID, err := cmd.Flags().GetUint32("event-id")
+			r = support.NewResolve(cmd.Context())
+			resp, err := r.ResolveEventID(cmd.Flags())
 			if err != nil {
-				return fmt.Errorf("parse event-id flag: %w", err)
+				return err
 			}
 
 			runner := &getCombinedStandingsCommand{
-				apiBaseURL:   config.APIAddr,
-				apiToken:     config.APIToken,
-				eventID:      eventID,
+				apiBaseURL: config.APIAddr,
+				apiToken:   config.APIToken,
+				eventID:    resp.EventId,
+
 				outputFormat: outputFormat,
 				skipMode:     skipMode,
 				out:          cmd.OutOrStdout(),
@@ -46,9 +51,9 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().Uint32("event-id", 0, "ID of the event to get combined standings for")
-	if err := cmd.MarkFlagRequired("event-id"); err != nil {
-		panic(err)
-	}
+	cmd.Flags().Uint32("season-id", 0, "ID of the season to get combined standings for")
+	cmd.Flags().Uint32("event-no", 0, "Number of the event to get combined standings for")
+
 	cmd.Flags().StringVarP(&outputFormat,
 		"output",
 		"o",

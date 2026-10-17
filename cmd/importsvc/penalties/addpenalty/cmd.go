@@ -6,11 +6,13 @@ import (
 	"io"
 
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
+	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
 	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/config"
 	importclient "github.com/srlmgr/cli/cmd/importsvc/client"
+	"github.com/srlmgr/cli/cmd/support"
 	"github.com/srlmgr/cli/log"
 )
 
@@ -42,9 +44,6 @@ type addPenaltyCommand struct {
 //nolint:funlen // many parameters
 func NewCmd() *cobra.Command {
 	var (
-		eventID       uint32
-		raceID        uint32
-		gridID        uint32
 		driverID      uint32
 		teamID        uint32
 		penaltyPoints int32
@@ -58,10 +57,26 @@ func NewCmd() *cobra.Command {
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := log.GetFromContext(cmd.Context()).Named("rpc")
 
+			r := support.NewResolve(cmd.Context())
+			var resp *queryv1.ResolveSeasonTargetResponse
+			var err error
+			resp, err = r.AutoResolve(cmd.Flags())
+			if err != nil {
+				return err
+			}
+			// here we need to remove the "lower level ids" from the result
+			if resp.RaceId != 0 {
+				resp.EventId = 0
+			}
+			if resp.RaceGridId != 0 {
+				resp.RaceId = 0
+				resp.EventId = 0
+			}
+
 			runner := &addPenaltyCommand{
-				eventID:       eventID,
-				raceID:        raceID,
-				gridID:        gridID,
+				eventID:       resp.EventId,
+				raceID:        resp.RaceId,
+				gridID:        resp.RaceGridId,
 				driverID:      driverID,
 				teamID:        teamID,
 				penaltyPoints: penaltyPoints,
@@ -75,10 +90,14 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	// Scope flags (mutually exclusive)
-	cmd.Flags().Uint32Var(&eventID, "event-id", 0, "ID of the event to apply penalty to")
-	cmd.Flags().Uint32Var(&raceID, "race-id", 0, "ID of the race to apply penalty to")
-	cmd.Flags().Uint32Var(&gridID, "grid-id", 0, "ID of the race grid to apply penalty to")
+	// Scope flags
+	cmd.Flags().Uint32("season-id", 0, "ID of the season to apply penalty to")
+	cmd.Flags().Uint32("event-id", 0, "ID of the event to apply penalty to")
+	cmd.Flags().Uint32("race-id", 0, "ID of the race to apply penalty to")
+	cmd.Flags().Uint32("grid-id", 0, "ID of the race grid to apply penalty to")
+	cmd.Flags().Uint32("event-no", 0, "Number of the event to apply penalty to")
+	cmd.Flags().Uint32("race-no", 0, "Number of the race to apply penalty to")
+	cmd.Flags().Uint32("grid-no", 0, "Number of the race grid to apply penalty to")
 
 	// Target flags (mutually exclusive)
 	cmd.Flags().Uint32Var(&driverID, "driver-id", 0, "ID of the driver to penalize")

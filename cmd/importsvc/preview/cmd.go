@@ -13,21 +13,27 @@ import (
 	"github.com/srlmgr/cli/cmd/config"
 	importclient "github.com/srlmgr/cli/cmd/importsvc/client"
 	queryclient "github.com/srlmgr/cli/cmd/query/client"
+	"github.com/srlmgr/cli/cmd/support"
 	"github.com/srlmgr/cli/log"
 )
 
 //nolint:lll // readability
 func NewCmd() *cobra.Command {
-	var gridID uint32
 	cmd := &cobra.Command{
 		Use:   "preview",
 		Short: "Preview preprocessed results for a race",
 		Long:  "Fetch a preprocessing preview via backend.import.v1.ImportService.GetPreprocessPreview",
 		RunE: func(cmd *cobra.Command, args []string) error {
 			logger := log.GetFromContext(cmd.Context()).Named("rpc")
-
+			r := support.NewResolve(cmd.Context())
+			var resp *queryv1.ResolveSeasonTargetResponse
+			var err error
+			resp, err = r.AutoResolve(cmd.Flags())
+			if err != nil {
+				return err
+			}
 			runner := &previewCommand{
-				raceGridID: gridID,
+				raceGridID: resp.RaceGridId,
 				out:        cmd.OutOrStdout(),
 				qrySvc: queryclient.NewQueryServiceClient(
 					config.APIAddr, logger,
@@ -39,11 +45,11 @@ func NewCmd() *cobra.Command {
 			return runner.run(cmd.Context())
 		},
 	}
-
-	cmd.Flags().Uint32Var(&gridID, "grid-id", 0, "ID of the race grid to preview results for")
-	if err := cmd.MarkFlagRequired("grid-id"); err != nil {
-		panic(fmt.Sprintf("failed to mark 'grid-id' flag as required: %v", err))
-	}
+	cmd.Flags().Uint32("season-id", 0, "ID of the season to view preview for")
+	cmd.Flags().Uint32("grid-id", 0, "ID of the race grid to view preview for")
+	cmd.Flags().Uint32("event-no", 0, "Number of the event to view preview for")
+	cmd.Flags().Uint32("race-no", 0, "Number of the race to view preview for")
+	cmd.Flags().Uint32("grid-no", 0, "Number of the race grid to view preview for")
 
 	return cmd
 }

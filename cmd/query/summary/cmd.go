@@ -16,26 +16,33 @@ import (
 
 	"github.com/srlmgr/cli/cmd/config"
 	"github.com/srlmgr/cli/cmd/query/client"
+	"github.com/srlmgr/cli/cmd/support"
 	"github.com/srlmgr/cli/conversion"
 	"github.com/srlmgr/cli/log"
 )
 
 func NewCmd() *cobra.Command {
-	var eventID uint32
-	var raceID uint32
 	var outputFormat string
 	var summaryTargetType string
+	var r *support.Resolve
 	cmd := &cobra.Command{
 		Use:   "summary",
 		Short: "get summary for race or event",
 		Long:  "Commands for getting summary from backend.query.v1.QueryService",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			r = support.NewResolve(cmd.Context())
+			var resp *queryv1.ResolveSeasonTargetResponse
+			var err error
+			resp, err = r.AutoResolve(cmd.Flags())
+			if err != nil {
+				return err
+			}
 			runner := &querySummaryCommand{
 				apiBaseURL:        config.APIAddr,
 				apiToken:          config.APIToken,
 				outputFormat:      outputFormat,
-				eventID:           eventID,
-				raceID:            raceID,
+				eventID:           resp.EventId,
+				raceID:            resp.RaceId,
 				summaryTargetType: summaryTargetType,
 				out:               cmd.OutOrStdout(),
 			}
@@ -47,20 +54,18 @@ func NewCmd() *cobra.Command {
 		"o",
 		"table",
 		"Output format (table or csv)")
-	cmd.Flags().Uint32Var(&raceID,
-		"race-id",
-		0,
-		"ID of a race to get summary for")
-	cmd.Flags().Uint32Var(&eventID,
-		"event-id",
-		0,
-		"ID of an event to get summary for")
+
+	cmd.Flags().Uint32("event-id", 0, "ID of the event to get summary for")
+	cmd.Flags().Uint32("race-id", 0, "ID of the race to get summary for")
+	cmd.Flags().Uint32("season-id", 0, "ID of the season to get summary for")
+	cmd.Flags().Uint32("event-no", 0, "Number of the event to get summary for")
+	cmd.Flags().Uint32("race-no", 0, "Number of the race to get summary for")
+
 	cmd.Flags().StringVar(&summaryTargetType,
 		"type",
 		"driver",
 		"Summary target type (driver or team)")
-	cmd.MarkFlagsMutuallyExclusive("race-id", "event-id")
-	cmd.MarkFlagsOneRequired("event-id", "race-id")
+
 	return cmd
 }
 

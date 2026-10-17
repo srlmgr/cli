@@ -11,22 +11,25 @@ import (
 
 	"github.com/srlmgr/cli/cmd/config"
 	importclient "github.com/srlmgr/cli/cmd/importsvc/client"
+	"github.com/srlmgr/cli/cmd/support"
 	"github.com/srlmgr/cli/log"
 )
 
-//nolint:lll // readability
 func NewCmd() *cobra.Command {
-	var eventID uint32
-
 	cmd := &cobra.Command{
 		Use:   "auto",
 		Short: "create bookings based on an import batch (auto detect mode)",
 		Long:  "Create bookings via backend.import.v1.ImportService.CreateBookings",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			r := support.NewResolve(cmd.Context())
+			resp, err := r.ResolveEventID(cmd.Flags())
+			if err != nil {
+				return err
+			}
 			logger := log.GetFromContext(cmd.Context()).Named("rpc")
 
 			runner := &resolveCommand{
-				eventID: eventID,
+				eventID: resp.EventId,
 				out:     cmd.OutOrStdout(),
 				importSvc: importclient.NewImportServiceClient(
 					config.APIAddr, config.APIToken, logger,
@@ -36,10 +39,9 @@ func NewCmd() *cobra.Command {
 		},
 	}
 
-	cmd.Flags().Uint32Var(&eventID, "event-id", 0, "ID of the event to create bookings for")
-	if err := cmd.MarkFlagRequired("event-id"); err != nil {
-		panic(fmt.Sprintf("failed to mark 'event-id' flag as required: %v", err))
-	}
+	cmd.Flags().Uint32("event-id", 0, "ID of the event to create bookings for")
+	cmd.Flags().Uint32("season-id", 0, "ID of the season to create bookings for")
+	cmd.Flags().Uint32("event-no", 0, "Number of the event to create bookings for")
 
 	return cmd
 }
