@@ -131,6 +131,8 @@ func importFormatLiteral(value commonv1.ImportFormat) string {
 		return "csv"
 	case commonv1.ImportFormat_IMPORT_FORMAT_XML:
 		return "xml"
+	case commonv1.ImportFormat_IMPORT_FORMAT_API:
+		return "api"
 	case commonv1.ImportFormat_IMPORT_FORMAT_UNSPECIFIED:
 		return "unspecified"
 	default:

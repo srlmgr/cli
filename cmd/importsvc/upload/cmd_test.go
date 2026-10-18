@@ -67,7 +67,6 @@ func TestUploadCommand_Success(t *testing.T) {
 	runner := &uploadCommand{
 		raceGridID:   1,
 		importFormat: "json",
-		payload:      []byte(`{"results": []}`),
 		out:          &buf,
 		qrySvc:       &mockQueryClient{},
 		importSvc:    &mockImportClient{},
@@ -92,7 +91,6 @@ func TestUploadCommand_InvalidImportFormat(t *testing.T) {
 	runner := &uploadCommand{
 		raceGridID:   1,
 		importFormat: "invalid-format",
-		payload:      []byte("{}"),
 		out:          &bytes.Buffer{},
 		qrySvc:       &mockQueryClient{},
 		importSvc:    &mockImportClient{},
@@ -113,7 +111,6 @@ func TestUploadCommand_UploadError(t *testing.T) {
 	runner := &uploadCommand{
 		raceGridID:   1,
 		importFormat: "json",
-		payload:      []byte("{}"),
 		out:          &bytes.Buffer{},
 		qrySvc:       &mockQueryClient{},
 		importSvc: &mockImportClient{

@@ -22,6 +22,7 @@ import (
 //nolint:lll,funlen // readability
 func NewCmd() *cobra.Command {
 	var importFormat string
+	var externalResultID string
 	var filename string
 
 	cmd := &cobra.Command{
@@ -38,16 +39,13 @@ func NewCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			payload, err := os.ReadFile(filename)
-			if err != nil {
-				return fmt.Errorf("read file %q: %w", filename, err)
-			}
 
 			runner := &uploadCommand{
-				raceGridID:   resp.RaceGridId,
-				importFormat: importFormat,
-				payload:      payload,
-				out:          cmd.OutOrStdout(),
+				raceGridID:       resp.RaceGridId,
+				importFormat:     importFormat,
+				externalResultID: externalResultID,
+				filename:         filename,
+				out:              cmd.OutOrStdout(),
 				qrySvc: queryclient.NewQueryServiceClient(
 					config.APIAddr, logger,
 				),
@@ -71,9 +69,9 @@ func NewCmd() *cobra.Command {
 	}
 
 	cmd.Flags().StringVar(&filename, "filename", "", "Path to the results file to upload")
-	if err := cmd.MarkFlagRequired("filename"); err != nil {
-		panic(fmt.Sprintf("failed to mark 'filename' flag as required: %v", err))
-	}
+
+	cmd.Flags().
+		StringVar(&externalResultID, "external-result-id", "", "External result ID associated with the upload")
 
 	return cmd
 }
@@ -93,12 +91,13 @@ type importClient interface {
 }
 
 type uploadCommand struct {
-	raceGridID   uint32
-	importFormat string
-	payload      []byte
-	out          io.Writer
-	qrySvc       queryClient
-	importSvc    importClient
+	raceGridID       uint32
+	importFormat     string
+	externalResultID string // will be put into payload for import format API
+	filename         string
+	out              io.Writer
+	qrySvc           queryClient
+	importSvc        importClient
 }
 
 func (c *uploadCommand) run(ctx context.Context) error {
@@ -106,13 +105,22 @@ func (c *uploadCommand) run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("parse import format: %w", err)
 	}
-
+	var payload []byte
+	if c.filename != "" {
+		payload, err = os.ReadFile(c.filename)
+		if err != nil {
+			return fmt.Errorf("read file %q: %w", c.filename, err)
+		}
+	}
+	if c.externalResultID != "" {
+		payload = []byte(c.externalResultID)
+	}
 	resp, err := c.importSvc.UploadResultsFile(
 		ctx,
 		connect.NewRequest(&importv1.UploadResultsFileRequest{
 			RaceGridId:   c.raceGridID,
 			ImportFormat: format,
-			Payload:      c.payload,
+			Payload:      payload,
 		}),
 	)
 	if err != nil {
