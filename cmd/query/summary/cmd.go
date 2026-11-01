@@ -78,7 +78,6 @@ type querySummaryCommand struct {
 	out               io.Writer
 }
 
-//nolint:funlen // much work to do
 func (c *querySummaryCommand) run(ctx context.Context) error {
 	logger := log.GetFromContext(ctx).Named("rpc")
 	svc := client.NewQueryServiceClient(c.apiBaseURL, logger)
@@ -104,48 +103,47 @@ func (c *querySummaryCommand) run(ctx context.Context) error {
 		return fmt.Errorf("get summary: %w", err)
 	}
 
-	dIDs := lo.Map(resp.Msg.Summaries, func(s *commonv1.Summary, _ int) uint32 {
-		return s.GetReferenceId()
-	})
-
-	dResp, err := svc.ListDrivers(ctx, connect.NewRequest(&queryv1.ListDriversRequest{
-		Filter: &queryv1.ListDriversRequest_MultipleDrivers{
-			MultipleDrivers: &queryv1.ListMultipleDrivers{
-				DriverIds: dIDs,
-			},
-		},
-	}))
-	if err != nil {
-		return fmt.Errorf("list drivers: %w", err)
+	var lookup map[uint32]string
+	if targetType == commonv1.SummaryTargetType_SUMMARY_TARGET_TYPE_DRIVER {
+		lookup = buildDriverLookup(resp.Msg.GetDrivers())
 	}
-
-	driverByID := make(map[uint32]*commonv1.Driver, len(dResp.Msg.GetItems()))
-	for _, d := range dResp.Msg.GetItems() {
-		driverByID[d.GetId()] = d
+	if targetType == commonv1.SummaryTargetType_SUMMARY_TARGET_TYPE_TEAM {
+		lookup = buildTeamLookup(resp.Msg.GetTeams())
 	}
 
 	switch c.outputFormat {
 	case "csv":
-		return c.outputCSV(resp.Msg.Summaries, driverByID)
+		return c.outputCSV(resp.Msg, lookup)
 	default:
-		return c.outputTable(resp.Msg.Summaries, driverByID)
+		return c.outputTable(resp.Msg, lookup)
 	}
 }
 
 //nolint:whitespace // editor/linter issue
 func (c *querySummaryCommand) outputTable(
-	summaries []*commonv1.Summary,
-	driverByID map[uint32]*commonv1.Driver,
+	resp *queryv1.GetSummaryResponse,
+	lookup map[uint32]string,
 ) error {
 	w := tabwriter.NewWriter(c.out, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(w, "ID\tDRIVER\tPOINTS\tBONUS POINTS\tTOTAL POINTS")
-	for _, s := range summaries {
-		name := resolveDriverName(s.GetReferenceId(), driverByID)
-		fmt.Fprintf(w, "%d\t%s\t%d\t%d\t%d\n",
+	fmt.Fprintln(
+		w,
+		"ID\tNAME\tPOS POINTS\tBONUS\tSTEWARD_PENALTY\tRACE_PENALTY\tPENALTIES\tTOTAL POINTS",
+	)
+	for _, s := range resp.GetSummaries() {
+		pointLookup := lo.SliceToMap(s.GetPointDetails(),
+			func(item *commonv1.PointDetail) (commonv1.PointPolicyClass, int32) {
+				return item.GetType(), item.GetPoints()
+			})
+		name, _ := lo.Coalesce(lookup[s.GetReferenceId()],
+			strconv.Itoa(int(s.GetReferenceId())))
+		fmt.Fprintf(w, "%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\n",
 			s.GetReferenceId(),
 			name,
 			s.GetPoints(),
 			s.GetBonusPoints(),
+			pointLookup[commonv1.PointPolicyClass_POINT_POLICY_CLASS_STEWARD_PENALTY],
+			pointLookup[commonv1.PointPolicyClass_POINT_POLICY_CLASS_RACE_PENALTY],
+			s.GetPenaltyPoints(),
 			s.GetTotalPoints(),
 		)
 	}
@@ -154,22 +152,24 @@ func (c *querySummaryCommand) outputTable(
 
 //nolint:whitespace // editor/linter issue
 func (c *querySummaryCommand) outputCSV(
-	summaries []*commonv1.Summary,
-	driverByID map[uint32]*commonv1.Driver,
+	resp *queryv1.GetSummaryResponse,
+	lookup map[uint32]string,
 ) error {
 	w := csv.NewWriter(c.out)
 	if err := w.Write(
-		[]string{"id", "driver", "points", "bonus_points", "total_points"},
+		[]string{"id", "name", "points", "bonus_points", "penalty_points", "total_points"},
 	); err != nil {
 		return fmt.Errorf("write csv header: %w", err)
 	}
-	for _, s := range summaries {
-		name := resolveDriverName(s.GetReferenceId(), driverByID)
+	for _, s := range resp.GetSummaries() {
+		name, _ := lo.Coalesce(lookup[s.GetReferenceId()],
+			strconv.Itoa(int(s.GetReferenceId())))
 		if err := w.Write([]string{
 			strconv.Itoa(int(s.GetReferenceId())),
 			name,
 			strconv.Itoa(int(s.GetPoints())),
 			strconv.Itoa(int(s.GetBonusPoints())),
+			strconv.Itoa(int(s.GetPenaltyPoints())),
 			strconv.Itoa(int(s.GetTotalPoints())),
 		}); err != nil {
 			return fmt.Errorf("write csv row: %w", err)
@@ -179,9 +179,16 @@ func (c *querySummaryCommand) outputCSV(
 	return w.Error()
 }
 
-func resolveDriverName(id uint32, driverByID map[uint32]*commonv1.Driver) string {
-	if d, ok := driverByID[id]; ok {
-		return d.GetName()
-	}
-	return strconv.Itoa(int(id))
+func buildDriverLookup(drivers []*commonv1.Driver) map[uint32]string {
+	lookup := lo.SliceToMap(drivers, func(d *commonv1.Driver) (uint32, string) {
+		return d.GetId(), d.GetName()
+	})
+	return lookup
+}
+
+func buildTeamLookup(drivers []*commonv1.Team) map[uint32]string {
+	lookup := lo.SliceToMap(drivers, func(d *commonv1.Team) (uint32, string) {
+		return d.GetId(), d.GetName()
+	})
+	return lookup
 }

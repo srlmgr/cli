@@ -54,7 +54,7 @@ func (f *PrimaryStandingsFormatter) formatPrimaryStandingsJSON(
 	return nil
 }
 
-//nolint:whitespace,funlen // readability
+//nolint:whitespace,funlen,lll // readability
 func (f *PrimaryStandingsFormatter) formatPrimaryStandingsTable(
 	w io.Writer,
 	standingsResp *queryv1.GetStandingsResponse,
@@ -71,7 +71,7 @@ func (f *PrimaryStandingsFormatter) formatPrimaryStandingsTable(
 	tw := tabwriter.NewWriter(w, 0, 0, 2, ' ', 0)
 	if _, err := fmt.Fprintln(
 		tw,
-		"POS\tPREV_POS\tREF_ID\tNAME\tPOINTS\tEVENTS\tRACES\tWINS\tPODIUMS\tTOP5\tTOP10",
+		"POS\tPREV_POS\tREF_ID\tNAME\tPOINTS\tBONUS\tPENALTIES\tEVENTS\tRACES\tWINS\tPODIUMS\tTOP5\tTOP10",
 	); err != nil {
 		return fmt.Errorf("write header: %w", err)
 	}
@@ -81,12 +81,14 @@ func (f *PrimaryStandingsFormatter) formatPrimaryStandingsTable(
 		data := standing.GetData()
 		if _, err := fmt.Fprintf(
 			tw,
-			"%d\t%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
+			"%d\t%d\t%d\t%s\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\t%d\n",
 			data.GetPosition(),
 			data.GetPrevPosition(),
 			standing.GetReferenceId(),
 			idResolver(standing.GetReferenceId()),
 			data.GetTotalPoints(),
+			data.GetBonusPoints(),
+			data.GetPenaltyPoints(),
 			data.GetNumEvents(),
 			data.GetNumRaces(),
 			data.GetNumWins(),
