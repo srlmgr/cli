@@ -6,7 +6,6 @@ import (
 	"io"
 
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/config"
@@ -65,14 +64,14 @@ func (c *getSimulationCommand) run(ctx context.Context) error {
 
 	resp, err := svc.GetSimulation(
 		ctx,
-		connect.NewRequest(&queryv1.GetSimulationRequest{
+		&queryv1.GetSimulationRequest{
 			Id: c.simulationID,
-		}),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("get simulation: %w", err)
 	}
 
 	formatter := output.NewSimulationFormatter()
-	return formatter.FormatSimulation(c.out, c.outputFormat, resp.Msg)
+	return formatter.FormatSimulation(c.out, c.outputFormat, resp)
 }

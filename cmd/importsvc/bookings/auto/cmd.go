@@ -6,7 +6,6 @@ import (
 	"io"
 
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/config"
@@ -48,9 +47,8 @@ func NewCmd() *cobra.Command {
 
 type importClient interface {
 	ComputeBookingEntries(
-		context.Context,
-		*connect.Request[importv1.ComputeBookingEntriesRequest],
-	) (*connect.Response[importv1.ComputeBookingEntriesResponse], error)
+		context.Context, *importv1.ComputeBookingEntriesRequest,
+	) (*importv1.ComputeBookingEntriesResponse, error)
 }
 
 type resolveCommand struct {
@@ -62,9 +60,9 @@ type resolveCommand struct {
 func (c *resolveCommand) run(ctx context.Context) error {
 	resp, err := c.importSvc.ComputeBookingEntries(
 		ctx,
-		connect.NewRequest(&importv1.ComputeBookingEntriesRequest{
+		&importv1.ComputeBookingEntriesRequest{
 			EventId: c.eventID,
-		}),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("compute auto booking entries: %w", err)
@@ -73,7 +71,7 @@ func (c *resolveCommand) run(ctx context.Context) error {
 	if _, err = fmt.Fprintf(
 		c.out,
 		"Computed auto booking entries: created_entries=%d\n",
-		resp.Msg.GetCreatedEntries(),
+		resp.GetCreatedEntries(),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)
 	}

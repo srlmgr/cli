@@ -9,19 +9,18 @@ import (
 	"testing"
 
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
-	"connectrpc.com/connect"
 )
 
 // ---- mock implementations ----
 
 type mockImportClient struct {
-	resolveMappings func(context.Context, *connect.Request[importv1.ResolveMappingsRequest]) (*connect.Response[importv1.ResolveMappingsResponse], error)
+	resolveMappings func(context.Context, *importv1.ResolveMappingsRequest) (*importv1.ResolveMappingsResponse, error)
 }
 
 func (m *mockImportClient) ResolveMappings(
 	ctx context.Context,
-	req *connect.Request[importv1.ResolveMappingsRequest],
-) (*connect.Response[importv1.ResolveMappingsResponse], error) {
+	req *importv1.ResolveMappingsRequest,
+) (*importv1.ResolveMappingsResponse, error) {
 	if m.resolveMappings != nil {
 		return m.resolveMappings(ctx, req)
 	}
@@ -29,7 +28,7 @@ func (m *mockImportClient) ResolveMappings(
 	resp := &importv1.ResolveMappingsResponse{}
 	resp.SetUnresolvedMappings(3)
 
-	return connect.NewResponse(resp), nil
+	return resp, nil
 }
 
 // ---- tests ----
@@ -64,11 +63,11 @@ func TestResolveCommand_PassesRaceID(t *testing.T) {
 		raceGridID: 42,
 		out:        &bytes.Buffer{},
 		importSvc: &mockImportClient{
-			resolveMappings: func(_ context.Context, req *connect.Request[importv1.ResolveMappingsRequest]) (*connect.Response[importv1.ResolveMappingsResponse], error) {
-				capturedRaceID = req.Msg.GetRaceGridId()
+			resolveMappings: func(_ context.Context, req *importv1.ResolveMappingsRequest) (*importv1.ResolveMappingsResponse, error) {
+				capturedRaceID = req.GetRaceGridId()
 				resp := &importv1.ResolveMappingsResponse{}
 				resp.SetUnresolvedMappings(0)
-				return connect.NewResponse(resp), nil
+				return resp, nil
 			},
 		},
 	}
@@ -89,7 +88,7 @@ func TestResolveCommand_ServiceError(t *testing.T) {
 		raceGridID: 1,
 		out:        &bytes.Buffer{},
 		importSvc: &mockImportClient{
-			resolveMappings: func(_ context.Context, _ *connect.Request[importv1.ResolveMappingsRequest]) (*connect.Response[importv1.ResolveMappingsResponse], error) {
+			resolveMappings: func(_ context.Context, _ *importv1.ResolveMappingsRequest) (*importv1.ResolveMappingsResponse, error) {
 				return nil, errors.New("service error")
 			},
 		},

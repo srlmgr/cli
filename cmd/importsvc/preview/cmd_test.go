@@ -11,46 +11,45 @@ import (
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 )
 
 // ---- mock implementations ----
 
 type mockQueryClient struct {
-	getRace func(context.Context, *connect.Request[queryv1.GetRaceRequest]) (*connect.Response[queryv1.GetRaceResponse], error)
+	getRace func(context.Context, *queryv1.GetRaceRequest) (*queryv1.GetRaceResponse, error)
 }
 
 func (m *mockQueryClient) GetRace(
 	ctx context.Context,
-	req *connect.Request[queryv1.GetRaceRequest],
-) (*connect.Response[queryv1.GetRaceResponse], error) {
+	req *queryv1.GetRaceRequest,
+) (*queryv1.GetRaceResponse, error) {
 	if m.getRace != nil {
 		return m.getRace(ctx, req)
 	}
 
 	race := &commonv1.Race{}
-	race.SetId(req.Msg.GetId())
+	race.SetId(req.GetId())
 	race.SetEventId(10)
 
 	resp := &queryv1.GetRaceResponse{}
 	resp.SetRace(race)
 
-	return connect.NewResponse(resp), nil
+	return resp, nil
 }
 
 type mockImportClient struct {
-	getPreprocessPreview func(context.Context, *connect.Request[importv1.GetPreprocessPreviewRequest]) (*connect.Response[importv1.GetPreprocessPreviewResponse], error)
+	getPreprocessPreview func(context.Context, *importv1.GetPreprocessPreviewRequest) (*importv1.GetPreprocessPreviewResponse, error)
 }
 
 func (m *mockImportClient) GetPreprocessPreview(
 	ctx context.Context,
-	req *connect.Request[importv1.GetPreprocessPreviewRequest],
-) (*connect.Response[importv1.GetPreprocessPreviewResponse], error) {
+	req *importv1.GetPreprocessPreviewRequest,
+) (*importv1.GetPreprocessPreviewResponse, error) {
 	if m.getPreprocessPreview != nil {
 		return m.getPreprocessPreview(ctx, req)
 	}
 
-	return connect.NewResponse(&importv1.GetPreprocessPreviewResponse{}), nil
+	return &importv1.GetPreprocessPreviewResponse{}, nil
 }
 
 // ---- tests ----
@@ -103,11 +102,11 @@ func TestPreviewCommand_WithRows(t *testing.T) {
 		out:        &buf,
 		qrySvc:     &mockQueryClient{},
 		importSvc: &mockImportClient{
-			getPreprocessPreview: func(_ context.Context, _ *connect.Request[importv1.GetPreprocessPreviewRequest]) (*connect.Response[importv1.GetPreprocessPreviewResponse], error) {
+			getPreprocessPreview: func(_ context.Context, _ *importv1.GetPreprocessPreviewRequest) (*importv1.GetPreprocessPreviewResponse, error) {
 				resp := &importv1.GetPreprocessPreviewResponse{}
 				resp.SetRows([]*commonv1.ResultEntry{row})
 				resp.SetUnresolvedMappings([]*commonv1.UnresolvedMapping{unresolved})
-				return connect.NewResponse(resp), nil
+				return resp, nil
 			},
 		},
 	}
@@ -139,7 +138,7 @@ func TestPreviewCommand_PreviewError(t *testing.T) {
 		out:        &bytes.Buffer{},
 		qrySvc:     &mockQueryClient{},
 		importSvc: &mockImportClient{
-			getPreprocessPreview: func(_ context.Context, _ *connect.Request[importv1.GetPreprocessPreviewRequest]) (*connect.Response[importv1.GetPreprocessPreviewResponse], error) {
+			getPreprocessPreview: func(_ context.Context, _ *importv1.GetPreprocessPreviewRequest) (*importv1.GetPreprocessPreviewResponse, error) {
 				return nil, errors.New("preview failed")
 			},
 		},

@@ -8,7 +8,6 @@ import (
 
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/config"
@@ -78,16 +77,14 @@ func NewCmd() *cobra.Command {
 
 type queryClient interface {
 	GetRace(
-		context.Context,
-		*connect.Request[queryv1.GetRaceRequest],
-	) (*connect.Response[queryv1.GetRaceResponse], error)
+		context.Context, *queryv1.GetRaceRequest,
+	) (*queryv1.GetRaceResponse, error)
 }
 
 type importClient interface {
 	UploadResultsFile(
-		context.Context,
-		*connect.Request[importv1.UploadResultsFileRequest],
-	) (*connect.Response[importv1.UploadResultsFileResponse], error)
+		context.Context, *importv1.UploadResultsFileRequest,
+	) (*importv1.UploadResultsFileResponse, error)
 }
 
 type uploadCommand struct {
@@ -117,11 +114,11 @@ func (c *uploadCommand) run(ctx context.Context) error {
 	}
 	resp, err := c.importSvc.UploadResultsFile(
 		ctx,
-		connect.NewRequest(&importv1.UploadResultsFileRequest{
+		&importv1.UploadResultsFileRequest{
 			RaceGridId:   c.raceGridID,
 			ImportFormat: format,
 			Payload:      payload,
-		}),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("upload results file: %w", err)
@@ -130,8 +127,8 @@ func (c *uploadCommand) run(ctx context.Context) error {
 	if _, err = fmt.Fprintf(
 		c.out,
 		"Uploaded results file: race_grid_id=%d processing_state=%s\n",
-		resp.Msg.GetRaceGridId(),
-		resp.Msg.GetProcessingState(),
+		resp.GetRaceGridId(),
+		resp.GetProcessingState(),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)
 	}

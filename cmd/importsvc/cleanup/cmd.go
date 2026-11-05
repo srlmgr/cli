@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/config"
@@ -15,9 +14,8 @@ import (
 
 type importClient interface {
 	CleanupProcessingData(
-		context.Context,
-		*connect.Request[importv1.CleanupProcessingDataRequest],
-	) (*connect.Response[importv1.CleanupProcessingDataResponse], error)
+		context.Context, *importv1.CleanupProcessingDataRequest,
+	) (*importv1.CleanupProcessingDataResponse, error)
 }
 
 type cleanupCommand struct {
@@ -108,7 +106,7 @@ func (c *cleanupCommand) run(ctx context.Context) error {
 		PerformRecompute:   c.recomputeResults,
 	}
 
-	_, err := c.importSvc.CleanupProcessingData(ctx, connect.NewRequest(req))
+	_, err := c.importSvc.CleanupProcessingData(ctx, req)
 	if err != nil {
 		return fmt.Errorf("cleanup processing data: %w", err)
 	}

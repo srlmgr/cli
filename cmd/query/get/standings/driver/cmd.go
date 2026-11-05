@@ -7,7 +7,6 @@ import (
 
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/config"
@@ -77,7 +76,7 @@ func (c *getDriverStandingsCommand) run(ctx context.Context) error {
 	// Get the driver standings
 	standingsResp, err := svc.GetDriverStandings(
 		ctx,
-		connect.NewRequest(&queryv1.GetDriverStandingsRequest{
+		&queryv1.GetDriverStandingsRequest{
 			EventId: c.eventID,
 			SkipMode: func() commonv1.SkipMode {
 				skipMode, err := conversion.ParseSkipMode(c.skipMode)
@@ -86,15 +85,15 @@ func (c *getDriverStandingsCommand) run(ctx context.Context) error {
 				}
 				return skipMode
 			}(),
-		}),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("get driver standings: %w", err)
 	}
 
 	// Extract driver IDs for name resolution
-	driverIDs := make([]uint32, len(standingsResp.Msg.GetStandings()))
-	for i, standing := range standingsResp.Msg.GetStandings() {
+	driverIDs := make([]uint32, len(standingsResp.GetStandings()))
+	for i, standing := range standingsResp.GetStandings() {
 		driverIDs[i] = standing.GetDriverId()
 	}
 
@@ -103,22 +102,22 @@ func (c *getDriverStandingsCommand) run(ctx context.Context) error {
 	if len(driverIDs) > 0 {
 		resp, err := svc.ListDrivers(
 			ctx,
-			connect.NewRequest(&queryv1.ListDriversRequest{
+			&queryv1.ListDriversRequest{
 				Filter: &queryv1.ListDriversRequest_MultipleDrivers{
 					MultipleDrivers: &queryv1.ListMultipleDrivers{
 						DriverIds: driverIDs,
 					},
 				},
-			}),
+			},
 		)
 		if err != nil {
 			return fmt.Errorf("list drivers: %w", err)
 		}
-		driversResp = resp.Msg
+		driversResp = resp
 	}
 
 	formatter := output.NewDriverStandingsFormatter()
 	return formatter.FormatDriverStandings(
-		c.out, c.outputFormat, standingsResp.Msg, driversResp,
+		c.out, c.outputFormat, standingsResp, driversResp,
 	)
 }

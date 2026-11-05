@@ -7,7 +7,6 @@ import (
 
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/config"
@@ -18,9 +17,8 @@ import (
 
 type importClient interface {
 	AddPenalty(
-		context.Context,
-		*connect.Request[importv1.AddPenaltyRequest],
-	) (*connect.Response[importv1.AddPenaltyResponse], error)
+		context.Context, *importv1.AddPenaltyRequest,
+	) (*importv1.AddPenaltyResponse, error)
 }
 
 type addPenaltyCommand struct {
@@ -175,7 +173,7 @@ func (c *addPenaltyCommand) run(ctx context.Context) error {
 		Reason:        c.reason,
 	}
 
-	_, err := c.importSvc.AddPenalty(ctx, connect.NewRequest(req))
+	_, err := c.importSvc.AddPenalty(ctx, req)
 	if err != nil {
 		return fmt.Errorf("add penalty: %w", err)
 	}
