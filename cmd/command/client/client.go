@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"buf.build/gen/go/srlmgr/api/connectrpc/go/backend/command/v1/commandv1connect"
-	"connectrpc.com/connect"
+	"buf.build/gen/go/srlmgr/api/connectrpc/go/v2/backend/command/v1/commandv1connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 
 	"github.com/srlmgr/cli/cmd/rpc"
 	"github.com/srlmgr/cli/log"
@@ -31,13 +32,14 @@ func NewCommandServiceClient(
 	baseURL, token string,
 	logger *log.Logger,
 ) commandv1connect.CommandServiceClient {
-	return commandv1connect.NewCommandServiceClient(
-		http.DefaultClient,
-		normalizeAPIBaseURL(baseURL),
-		connect.WithGRPC(),
-		connect.WithInterceptors(
-			rpc.NewAPITokenInterceptor(token),
-			rpc.NewTraceIDInterceptor(logger),
+	return commandv1connect.NewCommandServiceClient(connect.NewClient(
+		connecthttp.NewTransport(
+			http.DefaultClient,
+			normalizeAPIBaseURL(baseURL),
+			connecthttp.WithGRPC(),
+			connecthttp.WithReadMaxBytes(0),
 		),
-	)
+		rpc.NewAPITokenInterceptor(token),
+		rpc.NewTraceIDInterceptor(logger),
+	))
 }

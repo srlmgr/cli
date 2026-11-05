@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"io"
 
-	"buf.build/gen/go/srlmgr/api/connectrpc/go/backend/query/v1/queryv1connect"
+	"buf.build/gen/go/srlmgr/api/connectrpc/go/v2/backend/query/v1/queryv1connect"
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 
@@ -88,7 +87,7 @@ func (c *getCombinedStandingsCommand) run(ctx context.Context) error {
 	// Get the driver standings
 	standingsResp, err := standingsSvc.GetStandings(
 		ctx,
-		connect.NewRequest(&queryv1.GetStandingsRequest{
+		&queryv1.GetStandingsRequest{
 			EventId: c.eventID,
 			SkipMode: func() commonv1.SkipMode {
 				skipMode, err := conversion.ParseSkipMode(c.skipMode)
@@ -97,7 +96,7 @@ func (c *getCombinedStandingsCommand) run(ctx context.Context) error {
 				}
 				return skipMode
 			}(),
-		}),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("get driver standings: %w", err)
@@ -110,7 +109,7 @@ func (c *getCombinedStandingsCommand) run(ctx context.Context) error {
 		return fmt.Errorf("load season: %w", err)
 	}
 
-	if len(standingsResp.Msg.GetPrimaryStandings()) == 0 {
+	if len(standingsResp.GetPrimaryStandings()) == 0 {
 		if _, err := fmt.Fprintln(c.out, "No primary standings found."); err != nil {
 			return fmt.Errorf("write output: %w", err)
 		}
@@ -118,16 +117,16 @@ func (c *getCombinedStandingsCommand) run(ctx context.Context) error {
 	}
 	var primaryResolver output.IDResolver
 	//nolint:exhaustive // we only handle driver and team standings for now
-	switch standingsResp.Msg.GetPrimaryStandings()[0].StandingsType {
+	switch standingsResp.GetPrimaryStandings()[0].StandingsType {
 	case queryv1.StandingsType_STANDINGS_TYPE_DRIVER:
-		resolver, err := c.driverResolver(ctx, standingsResp.Msg.GetPrimaryStandings())
+		resolver, err := c.driverResolver(ctx, standingsResp.GetPrimaryStandings())
 		if err != nil {
 			return fmt.Errorf("resolve driver names: %w", err)
 		}
 		primaryResolver = resolver
 
 	case queryv1.StandingsType_STANDINGS_TYPE_TEAM:
-		resolver, err := c.teamResolver(ctx, standingsResp.Msg.GetPrimaryStandings())
+		resolver, err := c.teamResolver(ctx, standingsResp.GetPrimaryStandings())
 		if err != nil {
 			return fmt.Errorf("resolve team names: %w", err)
 		}
@@ -136,7 +135,7 @@ func (c *getCombinedStandingsCommand) run(ctx context.Context) error {
 
 	formatter := output.NewPrimaryStandingsFormatter()
 	return formatter.FormatPrimaryStandings(
-		c.out, c.outputFormat, standingsResp.Msg, primaryResolver,
+		c.out, c.outputFormat, standingsResp, primaryResolver,
 	)
 }
 
@@ -155,18 +154,18 @@ func (c *getCombinedStandingsCommand) driverResolver(
 	if len(driverIDs) > 0 {
 		resp, err := c.querySvc.ListDrivers(
 			ctx,
-			connect.NewRequest(&queryv1.ListDriversRequest{
+			&queryv1.ListDriversRequest{
 				Filter: &queryv1.ListDriversRequest_MultipleDrivers{
 					MultipleDrivers: &queryv1.ListMultipleDrivers{
 						DriverIds: driverIDs,
 					},
 				},
-			}),
+			},
 		)
 		if err != nil {
 			return nil, fmt.Errorf("list drivers: %w", err)
 		}
-		driversResp = resp.Msg
+		driversResp = resp
 	}
 	lookup := lo.SliceToMap(driversResp.GetItems(),
 		func(item *commonv1.Driver) (uint32, string) {
@@ -193,14 +192,14 @@ func (c *getCombinedStandingsCommand) teamResolver(
 	if len(teamIDs) > 0 {
 		resp, err := c.querySvc.ListTeams(
 			ctx,
-			connect.NewRequest(&queryv1.ListTeamsRequest{
+			&queryv1.ListTeamsRequest{
 				SeasonId: c.season.GetId(),
-			}),
+			},
 		)
 		if err != nil {
 			return nil, fmt.Errorf("list teams: %w", err)
 		}
-		teamsResp = resp.Msg
+		teamsResp = resp
 	}
 	lookup := lo.SliceToMap(teamsResp.GetItems(),
 		func(item *commonv1.Team) (uint32, string) {
@@ -213,25 +212,25 @@ func (c *getCombinedStandingsCommand) teamResolver(
 }
 
 func (c *getCombinedStandingsCommand) loadEvent(ctx context.Context) (err error) {
-	var resp *connect.Response[queryv1.GetEventResponse]
-	resp, err = c.querySvc.GetEvent(ctx, connect.NewRequest(&queryv1.GetEventRequest{
+	var resp *queryv1.GetEventResponse
+	resp, err = c.querySvc.GetEvent(ctx, &queryv1.GetEventRequest{
 		Id: c.eventID,
-	}))
+	})
 	if err != nil {
 		return fmt.Errorf("get event: %w", err)
 	}
-	c.event = resp.Msg.GetEvent()
+	c.event = resp.GetEvent()
 	return nil
 }
 
 func (c *getCombinedStandingsCommand) loadSeason(ctx context.Context) (err error) {
-	var resp *connect.Response[queryv1.GetSeasonResponse]
-	resp, err = c.querySvc.GetSeason(ctx, connect.NewRequest(&queryv1.GetSeasonRequest{
+	var resp *queryv1.GetSeasonResponse
+	resp, err = c.querySvc.GetSeason(ctx, &queryv1.GetSeasonRequest{
 		Id: c.event.GetSeasonId(),
-	}))
+	})
 	if err != nil {
 		return fmt.Errorf("get season: %w", err)
 	}
-	c.season = resp.Msg.GetSeason()
+	c.season = resp.GetSeason()
 	return nil
 }

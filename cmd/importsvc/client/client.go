@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"buf.build/gen/go/srlmgr/api/connectrpc/go/backend/import/v1/importv1connect"
-	"connectrpc.com/connect"
+	"buf.build/gen/go/srlmgr/api/connectrpc/go/v2/backend/import/v1/importv1connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 
 	"github.com/srlmgr/cli/cmd/rpc"
 	"github.com/srlmgr/cli/log"
@@ -18,15 +19,16 @@ func NewImportServiceClient(
 	apiBaseURL, token string,
 	logger *log.Logger,
 ) importv1connect.ImportServiceClient {
-	return importv1connect.NewImportServiceClient(
-		http.DefaultClient,
-		normalizeAPIBaseURL(apiBaseURL),
-		connect.WithGRPC(),
-		connect.WithInterceptors(
-			rpc.NewAPITokenInterceptor(token),
-			rpc.NewTraceIDInterceptor(logger),
+	return importv1connect.NewImportServiceClient(connect.NewClient(
+		connecthttp.NewTransport(
+			http.DefaultClient,
+			normalizeAPIBaseURL(apiBaseURL),
+			connecthttp.WithGRPC(),
+			connecthttp.WithReadMaxBytes(0),
 		),
-	)
+		rpc.NewAPITokenInterceptor(token),
+		rpc.NewTraceIDInterceptor(logger),
+	))
 }
 
 func normalizeAPIBaseURL(baseURL string) string {

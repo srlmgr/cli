@@ -11,41 +11,40 @@ import (
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 )
 
 // ---- mock implementations ----
 
 type mockQueryClient struct {
-	getRace func(context.Context, *connect.Request[queryv1.GetRaceRequest]) (*connect.Response[queryv1.GetRaceResponse], error)
+	getRace func(context.Context, *queryv1.GetRaceRequest) (*queryv1.GetRaceResponse, error)
 }
 
 func (m *mockQueryClient) GetRace(
 	ctx context.Context,
-	req *connect.Request[queryv1.GetRaceRequest],
-) (*connect.Response[queryv1.GetRaceResponse], error) {
+	req *queryv1.GetRaceRequest,
+) (*queryv1.GetRaceResponse, error) {
 	if m.getRace != nil {
 		return m.getRace(ctx, req)
 	}
 
 	race := &commonv1.Race{}
-	race.SetId(req.Msg.GetId())
+	race.SetId(req.GetId())
 	race.SetEventId(10)
 
 	resp := &queryv1.GetRaceResponse{}
 	resp.SetRace(race)
 
-	return connect.NewResponse(resp), nil
+	return resp, nil
 }
 
 type mockImportClient struct {
-	uploadResultsFile func(context.Context, *connect.Request[importv1.UploadResultsFileRequest]) (*connect.Response[importv1.UploadResultsFileResponse], error)
+	uploadResultsFile func(context.Context, *importv1.UploadResultsFileRequest) (*importv1.UploadResultsFileResponse, error)
 }
 
 func (m *mockImportClient) UploadResultsFile(
 	ctx context.Context,
-	req *connect.Request[importv1.UploadResultsFileRequest],
-) (*connect.Response[importv1.UploadResultsFileResponse], error) {
+	req *importv1.UploadResultsFileRequest,
+) (*importv1.UploadResultsFileResponse, error) {
 	if m.uploadResultsFile != nil {
 		return m.uploadResultsFile(ctx, req)
 	}
@@ -54,7 +53,7 @@ func (m *mockImportClient) UploadResultsFile(
 	resp.SetRaceGridId(42)
 	resp.SetProcessingState("PENDING")
 
-	return connect.NewResponse(resp), nil
+	return resp, nil
 }
 
 // ---- tests ----
@@ -114,7 +113,7 @@ func TestUploadCommand_UploadError(t *testing.T) {
 		out:          &bytes.Buffer{},
 		qrySvc:       &mockQueryClient{},
 		importSvc: &mockImportClient{
-			uploadResultsFile: func(_ context.Context, _ *connect.Request[importv1.UploadResultsFileRequest]) (*connect.Response[importv1.UploadResultsFileResponse], error) {
+			uploadResultsFile: func(_ context.Context, _ *importv1.UploadResultsFileRequest) (*importv1.UploadResultsFileResponse, error) {
 				return nil, errors.New("upload failed")
 			},
 		},

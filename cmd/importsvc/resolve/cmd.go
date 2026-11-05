@@ -7,7 +7,6 @@ import (
 
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/config"
@@ -53,9 +52,8 @@ func NewCmd() *cobra.Command {
 
 type importClient interface {
 	ResolveMappings(
-		context.Context,
-		*connect.Request[importv1.ResolveMappingsRequest],
-	) (*connect.Response[importv1.ResolveMappingsResponse], error)
+		context.Context, *importv1.ResolveMappingsRequest,
+	) (*importv1.ResolveMappingsResponse, error)
 }
 
 type resolveCommand struct {
@@ -67,9 +65,9 @@ type resolveCommand struct {
 func (c *resolveCommand) run(ctx context.Context) error {
 	resp, err := c.importSvc.ResolveMappings(
 		ctx,
-		connect.NewRequest(&importv1.ResolveMappingsRequest{
+		&importv1.ResolveMappingsRequest{
 			RaceGridId: c.raceGridID,
-		}),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("resolve mappings: %w", err)
@@ -78,7 +76,7 @@ func (c *resolveCommand) run(ctx context.Context) error {
 	if _, err = fmt.Fprintf(
 		c.out,
 		"Resolved mappings: unresolved_mappings=%d\n",
-		resp.Msg.GetUnresolvedMappings(),
+		resp.GetUnresolvedMappings(),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)
 	}

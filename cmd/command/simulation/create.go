@@ -6,7 +6,6 @@ import (
 	"io"
 
 	commandv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/command/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/command/client"
@@ -61,17 +60,17 @@ func (c *createSimulationCommand) run(ctx context.Context) error {
 
 	resp, err := cl.CreateSimulation(
 		ctx,
-		connect.NewRequest(&commandv1.CreateSimulationRequest{
+		&commandv1.CreateSimulationRequest{
 			Name:             c.name,
 			IsActive:         true,
 			SupportedFormats: supportedFormats,
-		}),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("create simulation: %w", err)
 	}
 
-	sim := resp.Msg.GetSimulation()
+	sim := resp.GetSimulation()
 	if _, err = fmt.Fprintf(c.out,
 		"Created simulation: id=%d name=%s active=%t supported_formats=%s\n",
 		sim.GetId(),

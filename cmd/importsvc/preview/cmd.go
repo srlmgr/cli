@@ -7,7 +7,6 @@ import (
 
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/config"
@@ -56,16 +55,14 @@ func NewCmd() *cobra.Command {
 
 type queryClient interface {
 	GetRace(
-		context.Context,
-		*connect.Request[queryv1.GetRaceRequest],
-	) (*connect.Response[queryv1.GetRaceResponse], error)
+		context.Context, *queryv1.GetRaceRequest,
+	) (*queryv1.GetRaceResponse, error)
 }
 
 type importClient interface {
 	GetPreprocessPreview(
-		context.Context,
-		*connect.Request[importv1.GetPreprocessPreviewRequest],
-	) (*connect.Response[importv1.GetPreprocessPreviewResponse], error)
+		context.Context, *importv1.GetPreprocessPreviewRequest,
+	) (*importv1.GetPreprocessPreviewResponse, error)
 }
 
 type previewCommand struct {
@@ -78,16 +75,16 @@ type previewCommand struct {
 func (c *previewCommand) run(ctx context.Context) error {
 	resp, err := c.importSvc.GetPreprocessPreview(
 		ctx,
-		connect.NewRequest(&importv1.GetPreprocessPreviewRequest{
+		&importv1.GetPreprocessPreviewRequest{
 			RaceGridId: c.raceGridID,
-		}),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("get preprocess preview: %w", err)
 	}
 
-	rows := resp.Msg.GetRows()
-	unresolvedMappings := resp.Msg.GetUnresolvedMappings()
+	rows := resp.GetRows()
+	unresolvedMappings := resp.GetUnresolvedMappings()
 
 	if _, err = fmt.Fprintf(c.out, "Preview: rows=%d unresolved_mappings=%d\n",
 		len(rows), len(unresolvedMappings),

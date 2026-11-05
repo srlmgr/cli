@@ -10,7 +10,6 @@ import (
 
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 	"github.com/samber/lo"
 	"github.com/spf13/cobra"
 
@@ -95,9 +94,9 @@ func (c *querySummaryCommand) run(ctx context.Context) error {
 	sel.Type = targetType
 	resp, err := svc.GetSummary(
 		ctx,
-		connect.NewRequest(&queryv1.GetSummaryRequest{
+		&queryv1.GetSummaryRequest{
 			Selector: &sel,
-		}),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("get summary: %w", err)
@@ -105,17 +104,17 @@ func (c *querySummaryCommand) run(ctx context.Context) error {
 
 	var lookup map[uint32]string
 	if targetType == commonv1.SummaryTargetType_SUMMARY_TARGET_TYPE_DRIVER {
-		lookup = buildDriverLookup(resp.Msg.GetDrivers())
+		lookup = buildDriverLookup(resp.GetDrivers())
 	}
 	if targetType == commonv1.SummaryTargetType_SUMMARY_TARGET_TYPE_TEAM {
-		lookup = buildTeamLookup(resp.Msg.GetTeams())
+		lookup = buildTeamLookup(resp.GetTeams())
 	}
 
 	switch c.outputFormat {
 	case "csv":
-		return c.outputCSV(resp.Msg, lookup)
+		return c.outputCSV(resp, lookup)
 	default:
-		return c.outputTable(resp.Msg, lookup)
+		return c.outputTable(resp, lookup)
 	}
 }
 

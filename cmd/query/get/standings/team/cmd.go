@@ -7,7 +7,6 @@ import (
 
 	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/config"
@@ -67,9 +66,9 @@ func (c *getTeamStandingsCommand) run(ctx context.Context) error {
 	// Get the team standings
 	standingsResp, err := svc.GetTeamStandings(
 		ctx,
-		connect.NewRequest(&queryv1.GetTeamStandingsRequest{
+		&queryv1.GetTeamStandingsRequest{
 			EventId: c.eventID,
-		}),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("get team standings: %w", err)
@@ -79,23 +78,23 @@ func (c *getTeamStandingsCommand) run(ctx context.Context) error {
 	// For simplicity, we'll make individual GetTeam calls for each team
 	// since ListTeams only supports filtering by season_id currently
 	teams := make(map[uint32]*commonv1.Team)
-	for _, standing := range standingsResp.Msg.GetStandings() {
+	for _, standing := range standingsResp.GetStandings() {
 		teamID := standing.GetTeamId()
 		if _, exists := teams[teamID]; !exists {
 			teamResp, err := svc.GetTeam(
 				ctx,
-				connect.NewRequest(&queryv1.GetTeamRequest{
+				&queryv1.GetTeamRequest{
 					Id: teamID,
-				}),
+				},
 			)
 			if err != nil {
 				// If we can't get the team name, we'll just use the ID
 				continue
 			}
-			teams[teamID] = teamResp.Msg.GetTeam()
+			teams[teamID] = teamResp.GetTeam()
 		}
 	}
 
 	formatter := output.NewTeamStandingsFormatter()
-	return formatter.FormatTeamStandings(c.out, c.outputFormat, standingsResp.Msg, teams)
+	return formatter.FormatTeamStandings(c.out, c.outputFormat, standingsResp, teams)
 }

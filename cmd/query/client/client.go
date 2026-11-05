@@ -4,8 +4,9 @@ import (
 	"net/http"
 	"strings"
 
-	"buf.build/gen/go/srlmgr/api/connectrpc/go/backend/query/v1/queryv1connect"
-	"connectrpc.com/connect"
+	"buf.build/gen/go/srlmgr/api/connectrpc/go/v2/backend/query/v1/queryv1connect"
+	"connectrpc.com/connect/v2"
+	"connectrpc.com/connect/v2/connecthttp"
 
 	"github.com/srlmgr/cli/cmd/rpc"
 	"github.com/srlmgr/cli/log"
@@ -18,14 +19,15 @@ func NewQueryServiceClient(
 	apiBaseURL string,
 	logger *log.Logger,
 ) queryv1connect.QueryServiceClient {
-	return queryv1connect.NewQueryServiceClient(
-		http.DefaultClient,
-		normalizeAPIBaseURL(apiBaseURL),
-		connect.WithGRPC(),
-		connect.WithInterceptors(
-			rpc.NewTraceIDInterceptor(logger),
+	return queryv1connect.NewQueryServiceClient(connect.NewClient(
+		connecthttp.NewTransport(
+			http.DefaultClient,
+			normalizeAPIBaseURL(apiBaseURL),
+			connecthttp.WithGRPC(),
+			connecthttp.WithReadMaxBytes(0),
 		),
-	)
+		rpc.NewTraceIDInterceptor(logger),
+	))
 }
 
 // NewStandingsServiceClient creates a new authenticated StandingsService client.
@@ -35,14 +37,15 @@ func NewStandingsServiceClient(
 	apiBaseURL string,
 	logger *log.Logger,
 ) queryv1connect.StandingsServiceClient {
-	return queryv1connect.NewStandingsServiceClient(
-		http.DefaultClient,
-		normalizeAPIBaseURL(apiBaseURL),
-		connect.WithGRPC(),
-		connect.WithInterceptors(
-			rpc.NewTraceIDInterceptor(logger),
+	return queryv1connect.NewStandingsServiceClient(connect.NewClient(
+		connecthttp.NewTransport(
+			http.DefaultClient,
+			normalizeAPIBaseURL(apiBaseURL),
+			connecthttp.WithGRPC(),
+			connecthttp.WithReadMaxBytes(0),
 		),
-	)
+		rpc.NewTraceIDInterceptor(logger),
+	))
 }
 
 func normalizeAPIBaseURL(baseURL string) string {

@@ -6,7 +6,6 @@ import (
 	"io"
 
 	commandv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/command/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/command/client"
@@ -50,9 +49,9 @@ func (c *deleteSimulationCommand) run(ctx context.Context) error {
 
 	_, err := cl.DeleteSimulation(
 		ctx,
-		connect.NewRequest(&commandv1.DeleteSimulationRequest{
+		&commandv1.DeleteSimulationRequest{
 			SimulationId: c.simulationID,
-		}),
+		},
 	)
 	if err != nil {
 		return fmt.Errorf("delete simulation: %w", err)

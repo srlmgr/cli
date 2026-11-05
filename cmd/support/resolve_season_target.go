@@ -4,9 +4,8 @@ import (
 	"context"
 	"fmt"
 
-	"buf.build/gen/go/srlmgr/api/connectrpc/go/backend/query/v1/queryv1connect"
+	"buf.build/gen/go/srlmgr/api/connectrpc/go/v2/backend/query/v1/queryv1connect"
 	queryv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/query/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/pflag"
 
 	"github.com/srlmgr/cli/cmd/config"
@@ -77,15 +76,15 @@ func (r *Resolve) ResolveEventID(
 	}
 	resp, err := r.querySvc.ResolveSeasonTarget(
 		r.ctx,
-		connect.NewRequest(&queryv1.ResolveSeasonTargetRequest{
+		&queryv1.ResolveSeasonTargetRequest{
 			SeasonId: seasonID,
 			EventNo:  eventNo,
-		}),
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("resolve season target: %w", err)
 	}
-	return resp.Msg, nil
+	return resp, nil
 }
 
 //nolint:whitespace // editor/linter issue
@@ -125,16 +124,16 @@ func (r *Resolve) ResolveRaceID(
 	}
 	resp, err := r.querySvc.ResolveSeasonTarget(
 		r.ctx,
-		connect.NewRequest(&queryv1.ResolveSeasonTargetRequest{
+		&queryv1.ResolveSeasonTargetRequest{
 			SeasonId: seasonID,
 			EventNo:  eventNo,
 			RaceNo:   raceNo,
-		}),
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("resolve season target: %w", err)
 	}
-	return resp.Msg, nil
+	return resp, nil
 }
 
 //nolint:whitespace,funlen // editor/linter issue
@@ -179,15 +178,15 @@ func (r *Resolve) ResolveRaceGridID(
 	}
 	resp, err := r.querySvc.ResolveSeasonTarget(
 		r.ctx,
-		connect.NewRequest(&queryv1.ResolveSeasonTargetRequest{
+		&queryv1.ResolveSeasonTargetRequest{
 			SeasonId:   seasonID,
 			EventNo:    eventNo,
 			RaceNo:     raceNo,
 			RaceGridNo: gridNo,
-		}),
+		},
 	)
 	if err != nil {
 		return nil, fmt.Errorf("resolve season target: %w", err)
 	}
-	return resp.Msg, nil
+	return resp, nil
 }

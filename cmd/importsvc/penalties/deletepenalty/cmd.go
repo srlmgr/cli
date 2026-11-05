@@ -6,7 +6,6 @@ import (
 	"io"
 
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
-	"connectrpc.com/connect"
 	"github.com/spf13/cobra"
 
 	"github.com/srlmgr/cli/cmd/config"
@@ -16,9 +15,8 @@ import (
 
 type importClient interface {
 	DeletePenalty(
-		context.Context,
-		*connect.Request[importv1.DeletePenaltyRequest],
-	) (*connect.Response[importv1.DeletePenaltyResponse], error)
+		context.Context, *importv1.DeletePenaltyRequest,
+	) (*importv1.DeletePenaltyResponse, error)
 }
 
 type deletePenaltyCommand struct {
@@ -61,7 +59,7 @@ func (c *deletePenaltyCommand) run(ctx context.Context) error {
 		PenaltyId: c.penaltyID,
 	}
 
-	_, err := c.importSvc.DeletePenalty(ctx, connect.NewRequest(req))
+	_, err := c.importSvc.DeletePenalty(ctx, req)
 	if err != nil {
 		return fmt.Errorf("delete penalty: %w", err)
 	}
