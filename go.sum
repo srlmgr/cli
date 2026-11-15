@@ -1,7 +1,7 @@
-buf.build/gen/go/srlmgr/api/connectrpc/go/v2 v2.0.2-20261101152004-442e194399ca.1 h1:rQFNv1eazJpbMQIcjZlS7Y9Uam2h3yXjI0m79K40IIU=
-buf.build/gen/go/srlmgr/api/connectrpc/go/v2 v2.0.2-20261101152004-442e194399ca.1/go.mod h1:la6azF1w5gUKw6fTa04J6IhewxjiAVmokTbCRJJrzWk=
-buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.12-20261101152004-442e194399ca.2 h1:9/zPc9AVzTQkynmdvodXa5De6gsjXdzOZGpS0a+A2pU=
-buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.12-20261101152004-442e194399ca.2/go.mod h1:I2Nrzxwj50dqRKYa2pgz9nCoEj55+j8w8/SJgl+7PUE=
+buf.build/gen/go/srlmgr/api/connectrpc/go/v2 v2.0.2-20261114174436-0078474ff33c.1 h1:/rzBaHNv52Dbt6X3/bgq0WjuG3AjwfnKEhq1ua5Qzrw=
+buf.build/gen/go/srlmgr/api/connectrpc/go/v2 v2.0.2-20261114174436-0078474ff33c.1/go.mod h1:dZ/gsnl9SUbnC9jRZ7As4d3ogBw8/tkiNd/oD1i/tUI=
+buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.12-20261114174436-0078474ff33c.2 h1:t6atjuIHnzTQt+L4xBd1WMGU7Tpcm5T5Y4GCDjbbGuk=
+buf.build/gen/go/srlmgr/api/protocolbuffers/go v1.36.12-20261114174436-0078474ff33c.2/go.mod h1:I2Nrzxwj50dqRKYa2pgz9nCoEj55+j8w8/SJgl+7PUE=
 connectrpc.com/connect/v2 v2.0.2 h1:PoPDmOlhc46elsuCdKCKTxjNBb3HJlKF+s/sP2oucPw=
 connectrpc.com/connect/v2 v2.0.2/go.mod h1:N32OLrstcPUzkykFynnefFro3+xzSdOrZlK2jHmS/xo=
 github.com/benbjohnson/clock v1.1.0/go.mod h1:J11/hYXuz8f4ySSvYwY0FKfm+ezbsZBKZxNJlLklBHA=

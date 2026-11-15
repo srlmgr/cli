@@ -11,6 +11,7 @@ import (
 
 	"github.com/srlmgr/cli/cmd/config"
 	importclient "github.com/srlmgr/cli/cmd/importsvc/client"
+	"github.com/srlmgr/cli/cmd/importsvc/mappingout"
 	"github.com/srlmgr/cli/cmd/support"
 	"github.com/srlmgr/cli/log"
 )
@@ -73,13 +74,14 @@ func (c *resolveCommand) run(ctx context.Context) error {
 		return fmt.Errorf("resolve mappings: %w", err)
 	}
 
+	unresolved := resp.GetUnresolvedMappings()
 	if _, err = fmt.Fprintf(
 		c.out,
 		"Resolved mappings: unresolved_mappings=%d\n",
-		resp.GetUnresolvedMappings(),
+		len(unresolved),
 	); err != nil {
 		return fmt.Errorf("write output: %w", err)
 	}
 
-	return nil
+	return mappingout.Write(c.out, unresolved)
 }

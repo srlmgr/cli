@@ -11,6 +11,7 @@ import (
 
 	"github.com/srlmgr/cli/cmd/config"
 	importclient "github.com/srlmgr/cli/cmd/importsvc/client"
+	"github.com/srlmgr/cli/cmd/importsvc/mappingout"
 	queryclient "github.com/srlmgr/cli/cmd/query/client"
 	"github.com/srlmgr/cli/cmd/support"
 	"github.com/srlmgr/cli/log"
@@ -108,15 +109,5 @@ func (c *previewCommand) run(ctx context.Context) error {
 		}
 	}
 
-	for _, m := range unresolvedMappings {
-		if _, err = fmt.Fprintf(c.out,
-			"  unresolved: source_value=%s mapping_type=%s\n",
-			m.GetSourceValue(),
-			m.GetMappingType(),
-		); err != nil {
-			return fmt.Errorf("write unresolved mapping output: %w", err)
-		}
-	}
-
-	return nil
+	return mappingout.Write(c.out, unresolvedMappings)
 }

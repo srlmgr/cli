@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	commonv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/common/v1"
 	importv1 "buf.build/gen/go/srlmgr/api/protocolbuffers/go/backend/import/v1"
 )
 
@@ -26,7 +27,17 @@ func (m *mockImportClient) ResolveMappings(
 	}
 
 	resp := &importv1.ResolveMappingsResponse{}
-	resp.SetUnresolvedMappings(3)
+	var ms []*commonv1.UnresolvedMapping
+	for range 3 {
+		m := &commonv1.UnresolvedMapping{}
+		m.SetSourceValue("drv")
+		m.SetMappingType("driver")
+		tm := &commonv1.TeamDriversMissing{}
+		tm.SetSourceTeamName("T1")
+		m.SetTeamDriversMissing(tm)
+		ms = append(ms, m)
+	}
+	resp.SetUnresolvedMappings(ms)
 
 	return resp, nil
 }
@@ -52,6 +63,17 @@ func TestResolveCommand_Success(t *testing.T) {
 	if !strings.Contains(out, "unresolved_mappings=3") {
 		t.Errorf("expected output to contain unresolved_mappings=3, got: %s", out)
 	}
+	if !strings.Contains(out, "SOURCE") || !strings.Contains(out, "TYPE") ||
+		!strings.Contains(out, "ENTRY ID") || !strings.Contains(out, "RESULT IDX") ||
+		!strings.Contains(out, "ERROR") {
+		t.Errorf("expected table headers, got: %s", out)
+	}
+	if !strings.Contains(out, `"drv"`) || !strings.Contains(out, "driver") {
+		t.Errorf("expected output to contain mapping context, got: %s", out)
+	}
+	if !strings.Contains(out, `Team drivers missing: "T1"`) {
+		t.Errorf("expected output to contain reason, got: %s", out)
+	}
 }
 
 func TestResolveCommand_PassesRaceID(t *testing.T) {
@@ -66,7 +88,7 @@ func TestResolveCommand_PassesRaceID(t *testing.T) {
 			resolveMappings: func(_ context.Context, req *importv1.ResolveMappingsRequest) (*importv1.ResolveMappingsResponse, error) {
 				capturedRaceID = req.GetRaceGridId()
 				resp := &importv1.ResolveMappingsResponse{}
-				resp.SetUnresolvedMappings(0)
+				resp.SetUnresolvedMappings(nil)
 				return resp, nil
 			},
 		},

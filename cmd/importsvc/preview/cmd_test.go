@@ -125,8 +125,8 @@ func TestPreviewCommand_WithRows(t *testing.T) {
 	if !strings.Contains(out, "driver_id=3") {
 		t.Errorf("expected output to contain driver_id=3, got: %s", out)
 	}
-	if !strings.Contains(out, "source_value=driver_abc") {
-		t.Errorf("expected output to contain source_value=driver_abc, got: %s", out)
+	if !strings.Contains(out, `"driver_abc"`) {
+		t.Errorf("expected output to contain mapping context, got: %s", out)
 	}
 }
 
